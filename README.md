@@ -1,9 +1,9 @@
 # ClauLint
 Next Project for ClauText, ClauText Schema Maker? and Validator ( check JsonLint )
-    # - todo : Tokenizer in clautext?
-      # token in 'abc def' with ""
-      # -> a b c _ d e f ?
-      # chk '_' => __
+        # - todo : Tokenizer in clautext?
+          # token in 'abc def' with ""
+          # -> a b c _ d e f ?
+          # chk '_' => __
 
     ## ClauLint?
     # in data check file?
