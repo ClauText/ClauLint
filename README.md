@@ -71,31 +71,30 @@
                         core%one_more = %total_id%int%event_test
                 }
         }
+        
+# test
+        # template??
+        # remove - just_one, one_more, order_off? or %multiple_on ?
+        # %int + number -> %int %int %int ...
+        # array -> %order_on?
+        # object -> %order_off?
+        # optional! - chk!
+        # num of valid var or val??
+        # check - exist chck array?
 
+        %order_on
 
-                # test
-                # template??
-                # remove - just_one, one_more, order_off? or %multiple_on ?
-                # %int + number -> %int %int %int ...
-                # array -> %order_on?
-                # object -> %order_off?
-                # optional! - chk!
-                # num of valid var or val??
-                # check - exist chck array?
+        $Event = {
+                id = __init__
+                $print = { data = { "init end" } }
+                $print = { enter = { \n } }
+        }
 
-                %order_on
+        xxx = %int
+        yyy = 3
 
-                $Event = {
-                        id = __init__
-                        $print = { data = { "init end" } }
-                        $print = { enter = { \n } }
-                }
-
-                xxx = %int
-                yyy = 3
-
-                x = { 
-                        a = { %order_on %int %int %int %int } 
-                                        # cf) number of int?
-                }
+        x = { 
+                a = { %order_on %int %int %int %int } 
+                                # cf) number of int?
+        }
 
