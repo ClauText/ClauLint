@@ -1,8 +1,8 @@
 # ClauLint
 
 # ToDo
-        %multiple
-
+        1. DONE - %multiple
+        2. %can_empty (array)
 # 
         Next Project for ClauText, ClauText Schema Maker? and Validator ( check JsonLint )
         # - todo : Tokenizer in clautext?
