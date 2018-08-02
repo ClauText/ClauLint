@@ -165,6 +165,14 @@ namespace Lint {
 	// chk valid in here!
 	inline bool OptionDoA(const Option& option, const std::string& str) 
 	{
+		if (option.prefix.empty() == false &&
+			option.prefix == str) {
+			return true;
+		}
+		else if (option.prefix.empty() == false &&
+			option.prefix != str) {
+			return false;
+		}
 		switch (option.type) {
 		case Option::Type_::ANY:
 			// pass
@@ -552,6 +560,13 @@ namespace Lint {
 			}
 		}
 
+		// __init__ first init.
+		{
+			wiz::ClauText clauText;
+			clauText.excute_module("Main = { $call = { id = __init__ } }", &schema_eventUT, wiz::ExcuteData(), opt, 0);
+		}
+
+		//
 		const bool chk = Check(&schema_eventUT, &schemaUT, &clautextUT);
 
 		//// debug
