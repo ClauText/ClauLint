@@ -31,23 +31,25 @@ namespace Lint {
 		enum class Type_ { ANY, INT, FLOAT, QUOTED_STRING, STRING, DATETIME, DATETIME_A, DATETIME_B };
 
 		//enum class Id_ { NONE, ID, TOTAL_ID };
-		enum class Optional_ { NONE, OPTIONAL_ };
+		//enum class Optional_ { NONE, OPTIONAL_ };
 		enum class OneMore_ { NONE, ONEMORE, JUSTONE };
-		enum class Required_ { NONE, REQUIRED };
+		enum class Required_ { REQUIRED, OPTIONAL_ };
 
 		enum class Order_ { NONE, OFF, ON }; // with global??
+		enum class Multiple_ { NONE, OFF, ON };
 	public:
 		Type_ type;
 		//Id_ id;
-		Optional_ optional;
-		OneMore_ onemore;
+		//Optional_ optional; // removal?
+		//OneMore_ onemore;
 		Required_ required;
 		std::string event_ids;
 
 		std::string prefix;
 	public:
-		Option() : type(Type_::ANY), optional(Optional_::NONE),//id(Id_::NONE), 
-			onemore(OneMore_::NONE), required(Required_::NONE)
+		Option() : type(Type_::ANY), //optional(Optional_::NONE),//id(Id_::NONE), 
+			//onemore(OneMore_::NONE), 
+			required(Required_::REQUIRED)
 		{
 			//
 		}
@@ -60,14 +62,14 @@ namespace Lint {
 		//	this->id = id;
 		//	return *this;
 		//}
-		Option & Optional(Optional_ optional) {
-			this->optional = optional;
-			return *this;
-		}
-		Option & OneMore(OneMore_ onemore) {
-			this->onemore = onemore;
-			return *this;
-		}
+		//Option & Optional(Optional_ optional) {
+			//this->optional = optional;
+			//return *this;
+		//}
+		//Option & OneMore(OneMore_ onemore) {
+		//	this->onemore = onemore;
+		//	return *this;
+		//}
 		Option & Required(Required_ required) {
 			this->required = required;
 			return *this;
@@ -80,7 +82,7 @@ namespace Lint {
 	public:
 		// check valid function?
 		bool IsValid() const {
-
+			// to do
 		}
 	};
 
@@ -139,14 +141,17 @@ namespace Lint {
 			else if ("%any" == opt) {
 				option.Type(Option::Type_::ANY);
 			}
+			//else if ("%optional" == opt) {
+			//	option.Optional(Option::Optional_::OPTIONAL_);
+			//}
+			//else if ("%one_more" == opt) { // x = { 1 2 3 4  } -> x = { %int%one_more%event_plus_test }
+			//	option.OneMore(Option::OneMore_::ONEMORE);
+			//}
+			//else if ("%just_one" == opt) {
+			//	option.OneMore(Option::OneMore_::JUSTONE);
+			//}
 			else if ("%optional" == opt) {
-				option.Optional(Option::Optional_::OPTIONAL_);
-			}
-			else if ("%one_more" == opt) { // x = { 1 2 3 4  } -> x = { %int%one_more%event_plus_test }
-				option.OneMore(Option::OneMore_::ONEMORE);
-			}
-			else if ("%just_one" == opt) {
-				option.OneMore(Option::OneMore_::JUSTONE);
+				option.Required(Option::Required_::OPTIONAL_);
 			}
 			else if ("%required" == opt) {
 				option.Required(Option::Required_::REQUIRED);
@@ -154,6 +159,10 @@ namespace Lint {
 			else if (wiz::String::startsWith(opt, "%event_")) { // size check?
 				std::string event_name = wiz::String::substring(opt, 7);
 				option.Event(std::move(event_name));
+			}
+			else {
+				std::cout << "wrong option" << ENTER;
+				exit(-2);
 			}
 
 			start = end_;
@@ -241,8 +250,8 @@ namespace Lint {
 	std::tuple<bool, Option, Option> _Check(wiz::load_data::UserType* schema_eventUT, 
 		const wiz::load_data::ItemType<WIZ_STRING_TYPE>& x, const wiz::load_data::ItemType<WIZ_STRING_TYPE>& y) //, Order?
 	{
-		Option var_option = OptionFrom(x.GetName()); // name, value check - not start with % ??
-		Option val_option = OptionFrom(x.Get(0));
+		const Option var_option = OptionFrom(x.GetName()); // name, value check - not start with % ??
+		const Option val_option = OptionFrom(x.Get(0));
 
 		// val only case, ex) A = { a b c d } , a, b, c, d `s name is empty.
 		if (x.GetName().empty()) {
@@ -257,20 +266,12 @@ namespace Lint {
 				return{ false, var_option, val_option };
 			}
 		}
-		
-		// cf) optional && justOne -> error? or return { a, b, c} or add parameter?
-		// required check. - for only var.? 
-		// optional check. - for only var.?
-		if (var_option.required != Option::Required_::REQUIRED
-			&& var_option.optional == Option::Optional_::OPTIONAL_)
-		{
-			return{ true, var_option, val_option };
-		}
 
 		// option type check.
-		if (OptionDoA(var_option, y.GetName()) &&
-			OptionDoA(val_option, y.Get(0))) {
-
+		const bool name_do = OptionDoA(var_option, y.GetName());
+		const bool val_do = OptionDoA(val_option, y.Get(0));
+		
+		if (name_do && val_do) {
 			// event check.
 			wiz::ClauText clauText;
 			wiz::StringTokenizer tokenizer(var_option.event_ids, &builder);
@@ -293,7 +294,7 @@ namespace Lint {
 				else {
 					schema_eventUT->RemoveUserTypeList(schema_eventUT->GetUserTypeListSize() - 1);
 
-					std::cout << "clauText is not valid" << ENTER;
+					std::cout << "clauText is not valid1" << ENTER;
 					return { false, var_option, val_option };
 				}
 			}
@@ -312,7 +313,7 @@ namespace Lint {
 				else {
 					schema_eventUT->RemoveUserTypeList(schema_eventUT->GetUserTypeListSize() - 1);
 
-					std::cout << "clauText is not valid" << ENTER;
+					std::cout << "clauText is not valid2" << ENTER;
 					return { false, var_option, val_option };
 				}
 			}
@@ -344,18 +345,10 @@ namespace Lint {
 			}
 		}
 
-		// cf) optional && justOne -> error? or return { a, b, c} or add parameter?
-		// required check. - for only var.? 
-		// optional check. - for only var.?
-		if (var_option.required != Option::Required_::REQUIRED
-			&& var_option.optional == Option::Optional_::OPTIONAL_)
-		{
-			return{ true, var_option };
-		}
-
 		// option type check.
-		if (OptionDoA(var_option, y->GetName())) {
+		const bool name_do = OptionDoA(var_option, y->GetName());
 
+		if (name_do) {
 			// event check.
 			wiz::ClauText clauText;
 			wiz::StringTokenizer tokenizer(var_option.event_ids, &builder);
@@ -377,7 +370,7 @@ namespace Lint {
 				else {
 					schema_eventUT->RemoveUserTypeList(schema_eventUT->GetUserTypeListSize() - 1);
 
-					std::cout << "clauText is not valid" << ENTER;
+					std::cout << "clauText is not valid3" << ENTER;
 					return { false, var_option };
 				}
 			}
@@ -389,7 +382,7 @@ namespace Lint {
 		return { true, var_option };
 	}
 
-	bool Check(wiz::load_data::UserType* schema_eventUT, wiz::load_data::UserType* schemaUT, 
+	bool Check(wiz::load_data::UserType* schema_eventUT, wiz::load_data::UserType* schemaUT,
 		const wiz::load_data::UserType* clautextUT)
 	{
 		Option::Order_ order = Option::Order_::OFF;
@@ -397,128 +390,155 @@ namespace Lint {
 		long long ct_utCount = 0; // for clautextUT?
 		long long itCount = 0;
 		long long utCount = 0;
-		
-		for (long long i = 0; i < schemaUT->GetIListSize(); ++i) {
-			if (schemaUT->IsItemList(i)) {
-				if (schemaUT->GetItemList(itCount).ToString() == "%order_on") {
-					order = Option::Order_::ON;
-					continue;
-				}
-				else if (schemaUT->GetItemList(itCount).ToString() == "%order_off") {
-					order = Option::Order_::OFF;
-					continue;
-				}
 
+		// for ORDER_::OFF
+		std::vector<bool> validVisit(schemaUT->GetIListSize(), false); // remove?
+		std::vector<Option> varOptionVisit(schemaUT->GetIListSize()); // remove?
+		std::vector<bool> mark(clautextUT->GetItemListSize(), false); // ct_it
+		std::vector<bool> mark2(clautextUT->GetUserTypeListSize(), false); // ct_ut
+
+		if (schemaUT->GetItemListSize() > 0 && schemaUT->GetItemList(itCount).ToString() == "%order_on") {
+			order = Option::Order_::ON;
+			validVisit[itCount] = true;
+			itCount++;
+		}
+		else if (schemaUT->GetItemListSize() > 0 && schemaUT->GetItemList(itCount).ToString() == "%order_off") {
+			order = Option::Order_::OFF;
+			validVisit[itCount] = true;
+			itCount++;
+		}
+
+		for (long long i = itCount; i < schemaUT->GetIListSize() && ct_itCount + ct_utCount < clautextUT->GetIListSize(); ++i) {
+			if (schemaUT->IsItemList(i)) {
 				// off -> no order? : slow??
 				if (order == Option::Order_::OFF) {
 					bool pass = false;
-					long long count = 0;
-					std::tuple<bool, Option, Option> temp;
-
+					std::tuple<bool, Option, Option> temp; 
+									// schemaUT?
 					for (long long j = 0; j < clautextUT->GetItemListSize(); ++j) {
-						if (std::get<0>(temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(j)))) {
-							// justone check. - for no order?
-
-							count++;
+						temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(j));
+						if (mark[j] == false && 
+								std::get<0>(temp)
+						) {
+							// visit vector? chk?
+							validVisit[i] = true;
+							varOptionVisit[i] = std::get<1>(temp);
+							mark[j] = true;
+							
 							pass = true;
+							break;
 						}
 					}
-					if (false == pass) {
-						std::cout << "clauText is not valid" << ENTER;
-						return false;
-					}
-					if (std::get<1>(temp).onemore == Option::OneMore_::JUSTONE) {
-						if (count == 1) {
 
+					if (false == pass && clautextUT->GetItemListSize() > 0) {
+						Option var_option = OptionFrom(schemaUT->GetItemList(itCount).GetName());
+
+						if (var_option.prefix.empty() == false && var_option.required == Option::Required_::OPTIONAL_) {
+							ct_itCount--;
 						}
 						else {
-							std::cout << "clauText is not valid" << ENTER;
+							std::cout << "clauText is not valid4" << ENTER;
 							return false;
 						}
 					}
 				}
 				else if (order == Option::Order_::ON) {
 					std::tuple<bool, Option, Option> temp;
-
-					if (clautextUT->IsItemList(ct_itCount)) {
-						if (std::get<0>(temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(ct_itCount)))) {
-							//
-						}
-						else {
-							std::cout << "clauText is not valid" << ENTER;
-							return false;
-						}
+					temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(ct_itCount));
+					
+					if (std::get<0>(temp)) {
+						validVisit[i] = true;
+					}
+					else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
+						ct_itCount--;
 					}
 					else {
-						std::cout << "clauText is not valid" << ENTER;
+						std::cout << "clauText is not valid6" << ENTER;
 						return false;
 					}
 				}
 				ct_itCount++;
+				itCount++;
 			}
 			else { // usertype
 				// off -> no order? : slow??
 				if (order == Option::Order_::OFF) {
 					bool pass = false;
-					long long count = 0; // for just one?
 					std::tuple<bool, Option> temp;
 
 					for (long long j = 0; j < clautextUT->GetUserTypeListSize(); ++j) {
-						if (std::get<0>(temp = _Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j)))) {
-							// justone check. - for no order?
-							if (Check(schema_eventUT, schemaUT, clautextUT->GetUserTypeList(j))) {
-								
+						if (mark2[j] == false && std::get<0>(temp = _Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j)))) {
+							if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j))) {
+								//
 							}
 							else {
-								std::cout << "clauText is not valid" << ENTER;
+								std::cout << "clauText is not valid8" << ENTER;
 								return false;
 							}
-							count++;
+
+							// visit vector? chk?
+							validVisit[i] = true;
+							varOptionVisit[i] = std::get<1>(temp);
+							mark2[j] = true;
+
 							pass = true;
+							break;
 						}
 					}
-					if (false == pass) {
-						std::cout << "clauText is not valid" << ENTER;
-						return false;
-					}
-					if (std::get<1>(temp).onemore == Option::OneMore_::JUSTONE) {
-						if (count == 1) {
+					if (false == pass && clautextUT->GetUserTypeListSize() > 0) {
+						Option var_option = OptionFrom(schemaUT->GetUserTypeList(utCount)->GetName());
 
+						if (var_option.prefix.empty() == false && var_option.required == Option::Required_::OPTIONAL_) {
+							ct_utCount--;
 						}
 						else {
-							std::cout << "clauText is not valid" << ENTER;
+							std::cout << "clauText is not valid9 " << schemaUT->GetUserTypeList(utCount)->GetName() << ENTER;
 							return false;
 						}
 					}
 				}
 				else if (order == Option::Order_::ON) {
-					std::tuple<bool, Option> temp;
+					std::tuple<bool, Option> temp = _Check(schema_eventUT,
+						schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount));
 
-					if (clautextUT->IsUserTypeList(ct_utCount)) {
-						if (std::get<0>(temp = _Check(schema_eventUT, 
-								schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount)))) {
-							if (Check(schema_eventUT, schemaUT, clautextUT->GetUserTypeList(ct_utCount))) {
-
-							}
-							else {
-								std::cout << "clauText is not valid" << ENTER;
-								return false;
-							}
+					if (std::get<0>(temp)) {
+						if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount))) {
+							validVisit[i] = true;
 						}
 						else {
-							std::cout << "clauText is not valid" << ENTER;
+							std::cout << "clauText is not valid11" << ENTER;
 							return false;
 						}
 					}
+					else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
+						ct_utCount--;
+					}
 					else {
-						std::cout << "clauText is not valid" << ENTER;
+						std::cout << "clauText is not valid12" << ENTER;
 						return false;
 					}
 				}
 				ct_utCount++;
+				utCount++;
 			}
 		}
-		
+
+		if (ct_itCount != clautextUT->GetItemListSize()) {
+			std::cout << "clauText is not valid13" << ENTER;
+			return false;
+		}
+		if (ct_utCount != clautextUT->GetUserTypeListSize()) {
+			std::cout << "clauText is not valid14 : " << ct_utCount << ENTER;
+			return false;
+		}
+
+		for (long long i = 0; i < validVisit.size(); ++i) {
+			if (false == validVisit[i]) {
+				std::cout << "clauText is not valid15" << ENTER;
+				return false;
+			}
+		}
+
 		return true;
 	}
 
