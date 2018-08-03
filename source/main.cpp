@@ -34,6 +34,7 @@ namespace Lint {
 		//enum class Optional_ { NONE, OPTIONAL_ };
 		enum class OneMore_ { NONE, ONEMORE, JUSTONE };
 		enum class Required_ { REQUIRED, OPTIONAL_ };
+		enum class EmptyUT_ { NONE, OFF, ON };
 
 		enum class Order_ { NONE, OFF, ON }; // with global??
 		enum class Multiple_ { NONE, OFF, ON };
@@ -42,6 +43,7 @@ namespace Lint {
 		//Id_ id;
 		//Optional_ optional; // removal?
 		//OneMore_ onemore;
+		EmptyUT_ empty_ut;
 		Required_ required;
 		std::string event_ids;
 
@@ -49,7 +51,8 @@ namespace Lint {
 	public:
 		Option() : type(Type_::ANY), //optional(Optional_::NONE),//id(Id_::NONE), 
 			//onemore(OneMore_::NONE), 
-			required(Required_::REQUIRED)
+			required(Required_::REQUIRED),
+			empty_ut(EmptyUT_::NONE)
 		{
 			//
 		}
@@ -70,6 +73,10 @@ namespace Lint {
 		//	this->onemore = onemore;
 		//	return *this;
 		//}
+		Option & EmptyUT(EmptyUT_ empty_ut) {
+			this->empty_ut = empty_ut;
+			return *this;
+		}
 		Option & Required(Required_ required) {
 			this->required = required;
 			return *this;
@@ -155,6 +162,9 @@ namespace Lint {
 			}
 			else if ("%required" == opt) {
 				option.Required(Option::Required_::REQUIRED);
+			}
+			else if ("%can_empty_ut" == opt) {
+				option.EmptyUT(Option::EmptyUT_::ON);
 			}
 			else if (wiz::String::startsWith(opt, "%event_")) { // size check?
 				std::string event_name = wiz::String::substring(opt, 7);
@@ -391,6 +401,8 @@ namespace Lint {
 		long long itCount = 0;
 		long long utCount = 0;
 
+		long multiple_flag = 0; // 0 : no multiple, 1 : multiple
+
 		// for ORDER_::OFF
 		std::vector<bool> validVisit(schemaUT->GetIListSize(), false); // remove?
 		std::vector<Option> varOptionVisit(schemaUT->GetIListSize()); // remove?
@@ -407,9 +419,20 @@ namespace Lint {
 			validVisit[itCount] = true;
 			itCount++;
 		}
+		
+		for (long long i = itCount; i < schemaUT->GetIListSize(); ++i) 
+		{
+			const bool chk_ct_it = ct_itCount < clautextUT->GetItemListSize();
+			const bool chk_ct_ut = ct_utCount < clautextUT->GetUserTypeListSize();
 
-		for (long long i = itCount; i < schemaUT->GetIListSize() && ct_itCount + ct_utCount < clautextUT->GetIListSize(); ++i) {
 			if (schemaUT->IsItemList(i)) {
+				if (schemaUT->GetItemList(itCount).ToString() == "%multiple_on") {
+					multiple_flag = 1;
+					validVisit[itCount] = true;
+					itCount++;
+					continue;
+				}
+
 				// off -> no order? : slow??
 				if (order == Option::Order_::OFF) {
 					bool pass = false;
@@ -443,9 +466,12 @@ namespace Lint {
 					}
 				}
 				else if (order == Option::Order_::ON) {
+					if (!chk_ct_it) {
+						break;
+					}
 					std::tuple<bool, Option, Option> temp;
 					temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(ct_itCount));
-					
+
 					if (std::get<0>(temp)) {
 						validVisit[i] = true;
 					}
@@ -455,6 +481,10 @@ namespace Lint {
 					else {
 						std::cout << "clauText is not valid6" << ENTER;
 						return false;
+					}
+
+					if (1 == multiple_flag) {
+						itCount--; i--;
 					}
 				}
 				ct_itCount++;
@@ -468,7 +498,10 @@ namespace Lint {
 
 					for (long long j = 0; j < clautextUT->GetUserTypeListSize(); ++j) {
 						if (mark2[j] == false && std::get<0>(temp = _Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j)))) {
-							if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j))) {
+							if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(j)->GetIListSize()) {
+
+							}
+							else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j))) {
 								//
 							}
 							else {
@@ -498,11 +531,19 @@ namespace Lint {
 					}
 				}
 				else if (order == Option::Order_::ON) {
+					if (!chk_ct_ut)
+					{
+						break;
+					}
+
 					std::tuple<bool, Option> temp = _Check(schema_eventUT,
 						schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount));
 
-					if (std::get<0>(temp)) {
-						if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount))) {
+					if (std::get<0>( temp)) {
+						if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(ct_utCount)->GetIListSize()) {
+
+						}
+						else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount))) {
 							validVisit[i] = true;
 						}
 						else {
@@ -517,10 +558,19 @@ namespace Lint {
 						std::cout << "clauText is not valid12" << ENTER;
 						return false;
 					}
+
+
+					if (1 == multiple_flag) {
+						utCount--; i--;
+					}
 				}
 				ct_utCount++;
 				utCount++;
 			}
+		}
+
+		if (multiple_flag) {
+			utCount++;
 		}
 
 		if (ct_itCount != clautextUT->GetItemListSize()) {
@@ -532,9 +582,18 @@ namespace Lint {
 			return false;
 		}
 
+		if (itCount != schemaUT->GetItemListSize()) {
+			std::cout << "clauText is not valid15 : " << ENTER;
+			return false;
+		}
+		if (utCount != schemaUT->GetUserTypeListSize()) {
+			std::cout << "clauText is not valid16 : " << ENTER;
+			return false;
+		}
+
 		for (long long i = 0; i < validVisit.size(); ++i) {
 			if (false == validVisit[i]) {
-				std::cout << "clauText is not valid15" << ENTER;
+				std::cout << "clauText is not valid17" << ENTER;
 				return false;
 			}
 		}
