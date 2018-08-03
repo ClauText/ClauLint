@@ -20,8 +20,8 @@ $Event = {
 xxx = %int
 yyy = 3
 
-x = { 
-	a = { %order_on %int %int %int %int } 
+x = { # %multiple_on + one ut. and repeating this can`t.
+	a%can_empty_ut = { %order_on %multiple_on %can_empty_ut%int = { %int } }  
 			# cf) number of int?
 }
 
