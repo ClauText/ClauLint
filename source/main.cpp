@@ -558,8 +558,7 @@ namespace Lint {
 						std::cout << "clauText is not valid12" << ENTER;
 						return false;
 					}
-
-
+					
 					if (1 == multiple_flag) {
 						utCount--; i--;
 					}
@@ -569,8 +568,14 @@ namespace Lint {
 			}
 		}
 
-		if (multiple_flag) {
+		if (multiple_flag && clautextUT->GetUserTypeListSize() > 0 && clautextUT->GetItemListSize() == 0) {
 			utCount++;
+		}
+		else if (multiple_flag && clautextUT->GetItemListSize() > 0 && clautextUT->GetUserTypeListSize() == 0) {
+			itCount++;
+		}
+		else if (multiple_flag) {
+			return false;
 		}
 
 		if (ct_itCount != clautextUT->GetItemListSize()) {
