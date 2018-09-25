@@ -260,26 +260,26 @@ namespace Lint {
 	std::tuple<bool, Option, Option> _Check(wiz::load_data::UserType* schema_eventUT, 
 		const wiz::load_data::ItemType<WIZ_STRING_TYPE>& x, const wiz::load_data::ItemType<WIZ_STRING_TYPE>& y) //, Order?
 	{
-		const Option var_option = OptionFrom(x.GetName()); // name, value check - not start with % ??
-		const Option val_option = OptionFrom(x.Get(0));
+		const Option var_option = OptionFrom(x.GetName().ToString()); // name, value check - not start with % ??
+		const Option val_option = OptionFrom(x.Get(0).ToString());
 
 		// val only case, ex) A = { a b c d } , a, b, c, d `s name is empty.
-		if (x.GetName().empty()) {
-			if (!y.GetName().empty()) {
+		if (x.GetName().ToString().empty()) {
+			if (!y.GetName().ToString().empty()) {
 				//
 				return{ false, var_option, val_option };
 			}
 		}
 		else { // bug?
-			if (y.GetName().empty()) {
+			if (y.GetName().ToString().empty()) {
 				//
 				return{ false, var_option, val_option };
 			}
 		}
 
 		// option type check.
-		const bool name_do = OptionDoA(var_option, y.GetName());
-		const bool val_do = OptionDoA(val_option, y.Get(0));
+		const bool name_do = OptionDoA(var_option, y.GetName().ToString());
+		const bool val_do = OptionDoA(val_option, y.Get(0).ToString());
 		
 		if (name_do && val_do) {
 			// event check.
@@ -294,7 +294,7 @@ namespace Lint {
 				// for var // chk no start with __, no end with __ ?
 				wiz::load_data::LoadData::AddData(*schema_eventUT, "/./", 
 					"Event = { id = __" + event_name + "__ $call = { id = " + event_name + 
-					", name = " + y.GetName() + ", value = " + y.Get(0) + 
+					", name = " + y.GetName().ToString() + ", value = " + y.Get(0).ToString() +
 					", is_usertype = FALSE" + " } }",
 					"TRUE", wiz::ExcuteData(), &builder);
 
@@ -313,7 +313,7 @@ namespace Lint {
 				// for val
 				wiz::load_data::LoadData::AddData(*schema_eventUT, "/./",
 					"Event = { id = __" + event_name + "__ $call = { id = " + event_name +
-					", name = " + y.GetName() + ", value = " + y.Get(0) +
+					", name = " + y.GetName().ToString() + ", value = " + y.Get(0).ToString() +
 					", is_usertype = FALSE" + " } }",
 					"TRUE", wiz::ExcuteData(), &builder);
 
@@ -339,24 +339,24 @@ namespace Lint {
 		const wiz::load_data::UserType* x, const wiz::load_data::UserType* y // Order?
 		) 
 	{
-		Option var_option = OptionFrom(x->GetName()); // name, value check - not start with % ??
+		Option var_option = OptionFrom(x->GetName().ToString()); // name, value check - not start with % ??
 
 		// val only case, ex) A = { a b c d } , a, b, c, d `s name is empty.
-		if (x->GetName().empty()) {
-			if (!y->GetName().empty()) {
+		if (x->GetName().ToString().empty()) {
+			if (!y->GetName().ToString().empty()) {
 				//
 				return{ false, var_option };
 			}
 		}
 		else { // bug?
-			if (y->GetName().empty()) {
+			if (y->GetName().ToString().empty()) {
 				//
 				return{ false, var_option };
 			}
 		}
 
 		// option type check.
-		const bool name_do = OptionDoA(var_option, y->GetName());
+		const bool name_do = OptionDoA(var_option, y->GetName().ToString());
 
 		if (name_do) {
 			// event check.
@@ -370,7 +370,7 @@ namespace Lint {
 				// for var // chk no start with __, no end with __ ?
 				wiz::load_data::LoadData::AddData(*schema_eventUT, "/./",
 					"Event = { id = __" + event_name + "__ $call = { id = " + event_name +
-					", name = " + y->GetName() +
+					", name = " + y->GetName().ToString() +
 					", is_usertype = TRUE } ",
 					"TRUE", wiz::ExcuteData(), &builder);
 
@@ -454,7 +454,7 @@ namespace Lint {
 					}
 
 					if (false == pass && clautextUT->GetItemListSize() > 0) {
-						Option var_option = OptionFrom(schemaUT->GetItemList(itCount).GetName());
+						Option var_option = OptionFrom(schemaUT->GetItemList(itCount).GetName().ToString());
 
 						if (var_option.prefix.empty() == false && var_option.required == Option::Required_::OPTIONAL_) {
 							ct_itCount--;
@@ -519,13 +519,13 @@ namespace Lint {
 						}
 					}
 					if (false == pass && clautextUT->GetUserTypeListSize() > 0) {
-						Option var_option = OptionFrom(schemaUT->GetUserTypeList(utCount)->GetName());
+						Option var_option = OptionFrom(schemaUT->GetUserTypeList(utCount)->GetName().ToString());
 
 						if (var_option.prefix.empty() == false && var_option.required == Option::Required_::OPTIONAL_) {
 							ct_utCount--;
 						}
 						else {
-							std::cout << "clauText is not valid9 " << schemaUT->GetUserTypeList(utCount)->GetName() << ENTER;
+							std::cout << "clauText is not valid9 " << schemaUT->GetUserTypeList(utCount)->GetName().ToString() << ENTER;
 							return false;
 						}
 					}
