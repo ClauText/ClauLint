@@ -3,11 +3,14 @@
 # ToDo
         1. DONE - %multiple
         2. %can_empty (array)
+        
         3. id
         4. total_id
-        5. one_more
+        
+        5. one_more 
         6. just_one
-# 
+                (5,6 => $list_size = { }) ?
+#               
         Next Project for ClauText, ClauText Schema Maker? and Validator ( check JsonLint )
         # - todo : Tokenizer in clautext?
         # token in 'abc def' with ""
