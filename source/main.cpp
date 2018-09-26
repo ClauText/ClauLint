@@ -14,7 +14,6 @@
 // ClauText
 #define ARRAY_QUEUE std::deque // chk?
 #define VECTOR std::vector
-//int log_result = 0;
 #include <wiz/ClauText.h>
 // ~ClauText
 
@@ -39,9 +38,8 @@ namespace Lint {
 		enum class Order_ { NONE, OFF, ON }; // with global??
 		enum class Multiple_ { NONE, OFF, ON };
 	public:
-		Type_ type;
+		std::vector<Type_> type;
 		//Id_ id;
-		//Optional_ optional; // removal?
 		//OneMore_ onemore;
 		EmptyUT_ empty_ut;
 		Required_ required;
@@ -49,7 +47,7 @@ namespace Lint {
 
 		std::string prefix;
 	public:
-		Option() : type(Type_::ANY), //optional(Optional_::NONE),//id(Id_::NONE), 
+		Option() : type(), //id(Id_::NONE), 
 			//onemore(OneMore_::NONE), 
 			required(Required_::REQUIRED),
 			empty_ut(EmptyUT_::NONE)
@@ -58,7 +56,7 @@ namespace Lint {
 		}
 	public:
 		Option & Type(Type_ type) {
-			this->type = type;
+			this->type.push_back(type);
 			return *this;
 		}
 		//Option & Id(Id_ id) {
@@ -97,7 +95,9 @@ namespace Lint {
 	Option OptionFrom(const std::string& option_str)
 	{
 		if (option_str.empty()) {
-			return Option(); // or throw error?
+			Option temp;
+			temp.type.push_back(Option::Type_::ANY);
+			return temp; // or throw error?
 		}
 
 		Option option;
@@ -148,9 +148,6 @@ namespace Lint {
 			else if ("%any" == opt) {
 				option.Type(Option::Type_::ANY);
 			}
-			//else if ("%optional" == opt) {
-			//	option.Optional(Option::Optional_::OPTIONAL_);
-			//}
 			//else if ("%one_more" == opt) { // x = { 1 2 3 4  } -> x = { %int%one_more%event_plus_test }
 			//	option.OneMore(Option::OneMore_::ONEMORE);
 			//}
@@ -178,6 +175,9 @@ namespace Lint {
 			start = end_;
 		}
 
+		if (option.type.empty()) {
+			option.type.push_back(Option::Type_::ANY);
+		}
 		return option;
 	}
 
@@ -192,69 +192,77 @@ namespace Lint {
 			option.prefix != str) {
 			return false;
 		}
-		switch (option.type) {
-		case Option::Type_::ANY:
-			// pass
-			break;
-		case Option::Type_::INT:
-			if (wiz::load_data::Utility::IsInteger(str)) {
-				//
+		
+		long long count = option.type.size();
+		auto type_list = option.type;
+
+		while (!type_list.empty()) {
+			switch (type_list.back()) {
+			case Option::Type_::ANY:
+				// pass
+				break;
+			case Option::Type_::INT:
+				if (wiz::load_data::Utility::IsInteger(str)) {
+					//
+				}
+				else {
+					std::cout << str << " is not integer" << ENTER;
+					count--;
+				}
+				break;
+			case Option::Type_::FLOAT:
+				if (wiz::load_data::Utility::IsDouble(str)) {
+					//
+				}
+				else {
+					std::cout << str << " is not double" << ENTER;
+					count--;
+				}
+				break;
+			case Option::Type_::DATETIME:
+				if (wiz::load_data::Utility::IsDate(str)) {
+					//
+				}
+				else {
+					std::cout << str << " is not date" << ENTER;
+					count--;
+				}
+				break;
+			case Option::Type_::DATETIME_A:
+				if (wiz::load_data::Utility::IsDateTimeA(str)) {
+					//
+				}
+				else {
+					std::cout << str << " is not datetime A" << ENTER;
+					count--;
+				}
+				break;
+			case Option::Type_::DATETIME_B:
+				if (wiz::load_data::Utility::IsDateTimeB(str)) {
+					//
+				}
+				else {
+					std::cout << str << " is not datetime B" << ENTER;
+					count--;
+				}
+				break;
+			case Option::Type_::QUOTED_STRING:
+				if (str.size() >= 2 && str[0] == str.back() && str.back() == '\"') { // cf '\''
+					//
+				}
+				else {
+					std::cout << str << " is not quoted string" << ENTER;
+					count--;
+				}
+				break;
+			case Option::Type_::STRING:
+				// pass
+				break;
 			}
-			else {
-				std::cout << str << " is not integer" << ENTER;
-				return false;
-			}
-			break;
-		case Option::Type_::FLOAT:
-			if (wiz::load_data::Utility::IsDouble(str)) {
-				//
-			}
-			else {
-				std::cout << str << " is not double" << ENTER;
-				return false;
-			}
-			break;
-		case Option::Type_::DATETIME:
-			if (wiz::load_data::Utility::IsDate(str)) {
-				//
-			}
-			else {
-				std::cout << str << " is not date" << ENTER;
-				return false;
-			}
-			break;
-		case Option::Type_::DATETIME_A:
-			if (wiz::load_data::Utility::IsDateTimeA(str)) {
-				//
-			}
-			else {
-				std::cout << str << " is not datetime A" << ENTER;
-				return false;
-			}
-			break;
-		case Option::Type_::DATETIME_B:
-			if (wiz::load_data::Utility::IsDateTimeB(str)) {
-				//
-			}
-			else {
-				std::cout << str << " is not datetime B" << ENTER;
-				return false;
-			}
-			break;
-		case Option::Type_::QUOTED_STRING:
-			if (str.size() >= 2 && str[0] == str.back() && str.back() == '\"') { // cf '\''
-				//
-			}
-			else {
-				std::cout << str << " is not quoted string" << ENTER;
-				return false;
-			}
-			break;
-		case Option::Type_::STRING:
-			// pass
-			break;
+			type_list.pop_back();
 		}
-		return true;
+
+		return count > 0;
 	}
 
 	std::tuple<bool, Option, Option> _Check(wiz::load_data::UserType* schema_eventUT, 
@@ -294,11 +302,11 @@ namespace Lint {
 				// for var // chk no start with __, no end with __ ?
 				wiz::load_data::LoadData::AddData(*schema_eventUT, "/./", 
 					"Event = { id = __" + event_name + "__ $call = { id = " + event_name + 
-					", name = " + y.GetName().ToString() + ", value = " + y.Get(0).ToString() +
-					", is_usertype = FALSE" + " } }",
+					" name = " + y.GetName().ToString() + " value = " + y.Get(0).ToString() +
+					" is_usertype = FALSE" + " } }",
 					"TRUE", wiz::ExcuteData(), &builder);
 
-				if ("TRUE" == clauText.excute_module("Main = { $call = { id = __" + event_name + "__ } }", schema_eventUT, wiz::ExcuteData(), opt, 0)) {
+				if ("TRUE" == clauText.excute_module("Main = { $call = { id = __" + event_name + "__ } }", schema_eventUT, wiz::ExcuteData(), opt, 1)) {
 					schema_eventUT->RemoveUserTypeList(schema_eventUT->GetUserTypeListSize() - 1);
 				}
 				else {
@@ -313,11 +321,11 @@ namespace Lint {
 				// for val
 				wiz::load_data::LoadData::AddData(*schema_eventUT, "/./",
 					"Event = { id = __" + event_name + "__ $call = { id = " + event_name +
-					", name = " + y.GetName().ToString() + ", value = " + y.Get(0).ToString() +
-					", is_usertype = FALSE" + " } }",
+					" name = " + y.GetName().ToString() + " value = " + y.Get(0).ToString() +
+					" is_usertype = FALSE" + " } }",
 					"TRUE", wiz::ExcuteData(), &builder);
 
-				if ("TRUE" == clauText.excute_module("Main = { $call = { id = __" + event_name + "__ } }", schema_eventUT, wiz::ExcuteData(), opt, 0)) {
+				if ("TRUE" == clauText.excute_module("Main = { $call = { id = __" + event_name + "__ } }", schema_eventUT, wiz::ExcuteData(), opt, 1)) {
 					schema_eventUT->RemoveUserTypeList(schema_eventUT->GetUserTypeListSize() - 1);
 				}
 				else {
@@ -370,11 +378,11 @@ namespace Lint {
 				// for var // chk no start with __, no end with __ ?
 				wiz::load_data::LoadData::AddData(*schema_eventUT, "/./",
 					"Event = { id = __" + event_name + "__ $call = { id = " + event_name +
-					", name = " + y->GetName().ToString() +
-					", is_usertype = TRUE } ",
+					" name = " + y->GetName().ToString() +
+					" is_usertype = TRUE }  } ",
 					"TRUE", wiz::ExcuteData(), &builder);
 
-				if ("TRUE" == clauText.excute_module("Main = { $call = { id = __" + event_name + "__ } }", schema_eventUT, wiz::ExcuteData(), opt, 0)) {
+				if ("TRUE" == clauText.excute_module("Main = { $call = { id = __" + event_name + "__ } }", schema_eventUT, wiz::ExcuteData(), opt, 1)) {
 					schema_eventUT->RemoveUserTypeList(schema_eventUT->GetUserTypeListSize() - 1);
 				}
 				else {
@@ -647,7 +655,7 @@ namespace Lint {
 		// __init__ first init.
 		{
 			wiz::ClauText clauText;
-			clauText.excute_module("Main = { $call = { id = __init__ } }", &schema_eventUT, wiz::ExcuteData(), opt, 0);
+			clauText.excute_module("Main = { $call = { id = __init__ } }", &schema_eventUT, wiz::ExcuteData(), opt, 1); // 0 (remove events) -> 1 (revoke events?)
 		}
 
 		//
