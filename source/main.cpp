@@ -266,7 +266,7 @@ namespace Lint {
 	}
 
 	std::tuple<bool, Option, Option> _Check(wiz::load_data::UserType* schema_eventUT, 
-		const wiz::load_data::ItemType<WIZ_STRING_TYPE>& x, const wiz::load_data::ItemType<WIZ_STRING_TYPE>& y) //, Order?
+		const wiz::load_data::ItemType<WIZ_STRING_TYPE>& x, const wiz::load_data::ItemType<WIZ_STRING_TYPE>& y, const std::string& real_dir) //, Order?
 	{
 		const Option var_option = OptionFrom(x.GetName().ToString()); // name, value check - not start with % ??
 		const Option val_option = OptionFrom(x.Get(0).ToString());
@@ -300,10 +300,12 @@ namespace Lint {
 				event_name = tokenizer.nextToken();
 
 				// for var // chk no start with __, no end with __ ?
-				wiz::load_data::LoadData::AddData(*schema_eventUT, "/./", 
-					"Event = { id = __" + event_name + "__ $call = { id = " + event_name + 
+				wiz::load_data::LoadData::AddData(*schema_eventUT, "/./",
+					"Event = { id = __" + event_name + "__ $call = { id = " + event_name +
 					" name = " + y.GetName().ToString() + " value = " + y.Get(0).ToString() +
-					" is_usertype = FALSE" + " } }",
+					" is_usertype = FALSE " +
+					" real_dir = " + real_dir +
+					" } }",
 					"TRUE", wiz::ExcuteData(), &builder);
 
 				if ("TRUE" == clauText.excute_module("Main = { $call = { id = __" + event_name + "__ } }", schema_eventUT, wiz::ExcuteData(), opt, 1)) {
@@ -322,7 +324,9 @@ namespace Lint {
 				wiz::load_data::LoadData::AddData(*schema_eventUT, "/./",
 					"Event = { id = __" + event_name + "__ $call = { id = " + event_name +
 					" name = " + y.GetName().ToString() + " value = " + y.Get(0).ToString() +
-					" is_usertype = FALSE" + " } }",
+					" is_usertype = FALSE " +
+					" real_dir = " + real_dir + 
+					" } }",
 					"TRUE", wiz::ExcuteData(), &builder);
 
 				if ("TRUE" == clauText.excute_module("Main = { $call = { id = __" + event_name + "__ } }", schema_eventUT, wiz::ExcuteData(), opt, 1)) {
@@ -344,7 +348,7 @@ namespace Lint {
 	}
 
 	std::tuple<bool, Option> _Check(wiz::load_data::UserType* schema_eventUT,
-		const wiz::load_data::UserType* x, const wiz::load_data::UserType* y // Order?
+		const wiz::load_data::UserType* x, const wiz::load_data::UserType* y, const std::string& real_dir // Order?
 		) 
 	{
 		Option var_option = OptionFrom(x->GetName().ToString()); // name, value check - not start with % ??
@@ -379,7 +383,9 @@ namespace Lint {
 				wiz::load_data::LoadData::AddData(*schema_eventUT, "/./",
 					"Event = { id = __" + event_name + "__ $call = { id = " + event_name +
 					" name = " + y->GetName().ToString() +
-					" is_usertype = TRUE }  } ",
+					" is_usertype = TRUE " +
+					" real_dir = " + real_dir +
+					"}  } ",
 					"TRUE", wiz::ExcuteData(), &builder);
 
 				if ("TRUE" == clauText.excute_module("Main = { $call = { id = __" + event_name + "__ } }", schema_eventUT, wiz::ExcuteData(), opt, 1)) {
@@ -447,7 +453,7 @@ namespace Lint {
 					std::tuple<bool, Option, Option> temp; 
 									// schemaUT?
 					for (long long j = 0; j < clautextUT->GetItemListSize(); ++j) {
-						temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(j));
+						temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(j), wiz::load_data::LoadData::GetRealDir(clautextUT->GetItemList(j).GetName().ToString(), clautextUT, &builder));
 						if (mark[j] == false && 
 								std::get<0>(temp)
 						) {
@@ -478,7 +484,7 @@ namespace Lint {
 						break;
 					}
 					std::tuple<bool, Option, Option> temp;
-					temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(ct_itCount));
+					temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(ct_itCount), wiz::load_data::LoadData::GetRealDir(clautextUT->GetItemList(ct_itCount).GetName().ToString(), clautextUT, &builder));
 
 					if (std::get<0>(temp)) {
 						validVisit[i] = true;
@@ -505,9 +511,9 @@ namespace Lint {
 					std::tuple<bool, Option> temp;
 
 					for (long long j = 0; j < clautextUT->GetUserTypeListSize(); ++j) {
-						if (mark2[j] == false && std::get<0>(temp = _Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j)))) {
+						if (mark2[j] == false && std::get<0>(temp = _Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j), wiz::load_data::LoadData::GetRealDir(clautextUT->GetUserTypeList(j)->GetName().ToString(), clautextUT->GetUserTypeList(j), &builder)))) {
 							if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(j)->GetIListSize()) {
-
+								//
 							}
 							else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j))) {
 								//
@@ -545,7 +551,9 @@ namespace Lint {
 					}
 
 					std::tuple<bool, Option> temp = _Check(schema_eventUT,
-						schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount));
+						schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount),
+						wiz::load_data::LoadData::GetRealDir(clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString(), clautextUT->GetUserTypeList(ct_utCount), &builder)
+					);
 
 					if (std::get<0>( temp)) {
 						if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(ct_utCount)->GetIListSize()) {
@@ -614,13 +622,14 @@ namespace Lint {
 		return true;
 	}
 
-	inline bool _Validate(const wiz::load_data::UserType& schemaFileUT, const wiz::load_data::UserType& clautextUT)
+	inline bool _Validate(const wiz::load_data::UserType& schemaFileUT)
 	{
 		// 1. $로 시작하는 것들을 따로 분리해서 별도의 UserType에 저장한다.
 			// 1-1. $Event -> 따로 뽑아낸 다음 Event로 rename?
 			// 1-2. $변수들 -> 따로 뽑아낸 다음 변수들로 rename?
 		// 2. $로 시작하지는 않는 것들은 data check 내용이다?
 			// 2-1. %로 시작하는 것을 찾아서 각각 수행한다. 
+		wiz::load_data::UserType* clautextUT;
 		wiz::load_data::UserType schema_eventUT;
 		wiz::load_data::UserType schemaUT;
 		int itemCount = 0;
@@ -653,13 +662,20 @@ namespace Lint {
 		}
 
 		// __init__ first init.
+		std::string start_name;
 		{
 			wiz::ClauText clauText;
-			clauText.excute_module("Main = { $call = { id = __init__ } }", &schema_eventUT, wiz::ExcuteData(), opt, 1); // 0 (remove events) -> 1 (revoke events?)
+			start_name = clauText.excute_module("Main = { $call = { id = __init__ } }", &schema_eventUT, wiz::ExcuteData(), opt, 1); // 0 (remove events) -> 1 (revoke events?)
+		
+			if (start_name.empty()) {
+				std::cout << "__init__ must return data`s start? folder?" << ENTER;
+				exit(-1);
+			}
 		}
 
+		clautextUT = wiz::load_data::UserType::Find(&schema_eventUT, start_name, &builder).second[0];
 		//
-		const bool chk = Check(&schema_eventUT, &schemaUT, &clautextUT);
+		const bool chk = Check(&schema_eventUT, &schemaUT, clautextUT);
 
 		//// debug
 		//std::cout << schema_eventUT.ToString() << ENTER
@@ -667,9 +683,9 @@ namespace Lint {
 		return chk;
 	}
 
-	inline bool Validate(const wiz::load_data::UserType& schema, const wiz::load_data::UserType& clautext)
+	inline bool Validate(const wiz::load_data::UserType& schema)
 	{
-		return _Validate(schema, clautext);
+		return _Validate(schema);
 	}
 
 
@@ -706,11 +722,11 @@ int main(int argc, char* argv[])
 	// -v : version? - to do
 	// -V : Validate.
 	// -m : make schema.
-	if (argc == 4 && 0 == strcmp("-V", argv[1])) {
+	if (argc == 3 && 0 == strcmp("-V", argv[1])) {
 		option = "-V";
 
-		auto chk_clautext = Lint::LoadFile(argv[2]);
-		auto chk_schema = Lint::LoadFile(argv[3]);
+		//auto chk_clautext = Lint::LoadFile(argv[2]);
+		auto chk_schema = Lint::LoadFile(argv[2]); // 3 -> 2
 
 		if (chk_schema.first) {
 			schema = std::move(chk_schema.second);
@@ -719,13 +735,13 @@ int main(int argc, char* argv[])
 			std::cout << "schema load fail" << ENTER;
 			return 1;
 		}
-		if (chk_clautext.first) {
-			clautext = std::move(chk_clautext.second);
-		}
-		else {
-			std::cout << "clautext load fail" << ENTER;
-			return 2;
-		}
+		//if (chk_clautext.first) {
+		//	clautext = std::move(chk_clautext.second);
+		//}
+		//else {
+		//	std::cout << "clautext load fail" << ENTER;
+		//	return 2;
+		//}
 	}
 	else if (argc == 4 && 0 == strcmp("-m", argv[1])) {
 		option = "-m";
@@ -743,7 +759,7 @@ int main(int argc, char* argv[])
 	}
 
 	if (option == "-V") {
-		auto chk = Lint::Validate(schema, clautext);
+		auto chk = Lint::Validate(schema);
 		if (chk) {
 			std::cout << "success" << ENTER;;
 		}
