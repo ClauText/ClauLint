@@ -30,8 +30,7 @@ namespace Lint {
 		enum class Type_ { ANY, INT, FLOAT, QUOTED_STRING, STRING, DATETIME, DATETIME_A, DATETIME_B };
 
 		enum class Id_ { NONE, ID, TOTAL_ID };
-		//enum class Optional_ { NONE, OPTIONAL_ };
-		enum class OneMore_ { NONE, ONEMORE, JUSTONE };
+		enum class OneMore_ { ONEMORE, JUSTONE };
 		enum class Required_ { REQUIRED, OPTIONAL_ };
 		enum class EmptyUT_ { NONE, OFF, ON };
 
@@ -40,7 +39,7 @@ namespace Lint {
 	public:
 		std::vector<Type_> type;
 		Id_ id;
-		//OneMore_ onemore;
+		OneMore_ onemore;
 		EmptyUT_ empty_ut;
 		Required_ required;
 		std::string event_ids;
@@ -63,14 +62,10 @@ namespace Lint {
 			this->id = id;
 			return *this;
 		}
-		//Option & Optional(Optional_ optional) {
-			//this->optional = optional;
-			//return *this;
-		//}
-		//Option & OneMore(OneMore_ onemore) {
-		//	this->onemore = onemore;
-		//	return *this;
-		//}
+		Option & OneMore(OneMore_ onemore) {
+			this->onemore = onemore;
+			return *this;
+		}
 		Option & EmptyUT(EmptyUT_ empty_ut) {
 			this->empty_ut = empty_ut;
 			return *this;
@@ -151,12 +146,12 @@ namespace Lint {
 			else if ("%any" == opt) {
 				option.Type(Option::Type_::ANY);
 			}
-			//else if ("%one_more" == opt) { // x = { 1 2 3 4  } -> x = { %int%one_more%event_plus_test }
-			//	option.OneMore(Option::OneMore_::ONEMORE);
-			//}
-			//else if ("%just_one" == opt) {
-			//	option.OneMore(Option::OneMore_::JUSTONE);
-			//}
+			else if ("%one_more" == opt) { // x = { 1 2 3 4  } -> x = { %int%one_more%event_plus_test }
+				option.OneMore(Option::OneMore_::ONEMORE);
+			}
+			else if ("%just_one" == opt) {
+				option.OneMore(Option::OneMore_::JUSTONE);
+			}
 			else if ("%optional" == opt) {
 				option.Required(Option::Required_::OPTIONAL_);
 			}
@@ -421,7 +416,7 @@ namespace Lint {
 		long long itCount = 0;
 		long long utCount = 0;
 
-		long multiple_flag = 0; // 0 : no multiple, 1 : multiple
+		long multiple_flag = 0; // 0 : no multiple, 1 : multiple - only arr of item, or arr of usertype.
 
 		// for ORDER_::OFF
 		std::vector<bool> validVisit(schemaUT->GetIListSize(), false); 
@@ -430,6 +425,7 @@ namespace Lint {
 		std::vector<bool> mark2(clautextUT->GetUserTypeListSize(), false); // ct_ut
 
 		std::set<std::pair<std::string, std::string>> check_id;
+		std::set<std::pair<std::string, std::string>> check_justone;
 
 		if (schemaUT->GetItemListSize() > 0 && schemaUT->GetItemList(itCount).ToString() == "%order_on") {
 			order = Option::Order_::ON;
@@ -496,7 +492,7 @@ namespace Lint {
 									return false;
 								}
 								const std::string key_1 = clautextUT->GetItemList(j).GetName().ToString();
-								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
+								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(schemaUT->GetName().ToString(), schemaUT, &builder);
 								const std::string key_3 = "it_name";
 
 								std::tuple<std::string, std::string, std::string> key(key_1, key_2, key_3);
@@ -529,7 +525,7 @@ namespace Lint {
 								}
 
 								const std::string key_1 = clautextUT->GetItemList(j).Get(0).ToString();
-								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
+								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(schemaUT->GetName().ToString(), schemaUT, &builder);
 								const std::string key_3 = "it_value";
 
 								std::tuple<std::string, std::string, std::string> key(key_1, key_2, key_3);
@@ -543,7 +539,20 @@ namespace Lint {
 								}
 							}
 
-							break;
+							// check justone, (onemore)
+							if (std::get<1>(temp).onemore == Option::OneMore_::JUSTONE) { // justone -> only for name! , not for value!
+								if (check_justone.find(std::make_pair(clautextUT->GetItemList(j).GetName().ToString(), std::string("it"))) != check_justone.end()) {
+									std::cout << "clauText is not valid, justone is set, but not justone. 1" << ENTER;
+									return false;
+								}
+								break;
+							}
+							else if(std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
+								//
+							}
+							else {
+								break;
+							}
 						}
 					}
 
@@ -590,7 +599,7 @@ namespace Lint {
 							}
 							
 							const std::string key_1 = clautextUT->GetItemList(ct_itCount).GetName().ToString();
-							const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
+							const std::string key_2 = wiz::load_data::LoadData::GetRealDir(schemaUT->GetName().ToString(), schemaUT, &builder);
 							const std::string key_3 = "it_name";
 
 							std::tuple<std::string, std::string, std::string> key(key_1, key_2, key_3);
@@ -623,7 +632,7 @@ namespace Lint {
 							}
 
 							const std::string key_1 = clautextUT->GetItemList(ct_itCount).Get(0).ToString();
-							const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
+							const std::string key_2 = wiz::load_data::LoadData::GetRealDir(schemaUT->GetName().ToString(), schemaUT, &builder);
 							const std::string key_3 = "it_value";
 
 							std::tuple<std::string, std::string, std::string> key(key_1, key_2, key_3);
@@ -635,6 +644,27 @@ namespace Lint {
 								std::cout << "clauText is not valid _ ID8" << ENTER;
 								return false;
 							}
+						}
+
+						// check justone, (onemore)
+						if (std::get<1>(temp).onemore == Option::OneMore_::JUSTONE) { // justone -> only for name! , not for value!
+							if (check_justone.find(std::make_pair(clautextUT->GetItemList(ct_itCount).GetName().ToString(), std::string("it"))) != check_justone.end()) {
+								std::cout << "clauText is not valid, justone is set, but not justone. 2" << ENTER;
+								return false;
+							}	
+						}
+						else if (std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
+							if (ct_itCount < clautextUT->GetItemListSize() - 1
+								&& i < schemaUT->GetItemListSize()- 1
+								&& clautextUT->GetItemList(ct_itCount).GetName() == clautextUT->GetItemList(ct_itCount + 1).GetName()
+							) {
+								if (1 != multiple_flag) {
+									--i; itCount--;
+								}
+							}
+						}
+						else {
+							//
 						}
 					}
 					else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
@@ -657,6 +687,7 @@ namespace Lint {
 				// off -> no order? : slow??
 				if (order == Option::Order_::OFF) {
 					bool pass = false;
+					bool use_onemore = false;
 					std::tuple<bool, Option> temp;
 
 					for (long long j = 0; j < clautextUT->GetUserTypeListSize(); ++j) {
@@ -700,7 +731,7 @@ namespace Lint {
 								}
 								
 								const std::string key_1 = clautextUT->GetUserTypeList(j)->GetName().ToString();
-								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
+								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(schemaUT->GetName().ToString(), schemaUT, &builder);
 								const std::string key_3 = "ut_name";
 
 								std::tuple<std::string, std::string, std::string> key(key_1, key_2, key_3);
@@ -713,7 +744,22 @@ namespace Lint {
 									return false;
 								}
 							}
-							break;
+
+							// check justone, (onemore)
+							if (std::get<1>(temp).onemore == Option::OneMore_::JUSTONE) { // justone -> only for name! , not for value!
+								if (check_justone.find(std::make_pair(clautextUT->GetUserTypeList(j)->GetName().ToString(), std::string("ut"))) != check_justone.end()) {
+									std::cout << "clauText is not valid, justone is set, but not justone. 3" << ENTER;
+									return false;
+								}
+								break;
+							}
+							else if (std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
+								ct_utCount++;
+								use_onemore = true;
+							}
+							else {
+								break;
+							}
 						}
 					}
 					if (false == pass && clautextUT->GetUserTypeListSize() > 0) {
@@ -726,6 +772,10 @@ namespace Lint {
 							std::cout << "clauText is not valid9 " << schemaUT->GetUserTypeList(utCount)->GetName().ToString() << ENTER;
 							return false;
 						}
+					}
+
+					if (use_onemore) {
+						ct_utCount--;
 					}
 				}
 				else if (order == Option::Order_::ON) {
@@ -767,7 +817,7 @@ namespace Lint {
 								}
 								
 								const std::string key_1 = clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString();
-								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
+								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(schemaUT->GetName().ToString(), schemaUT, &builder);
 								const std::string key_3 = "ut_name";
 
 								std::tuple<std::string, std::string, std::string> key(key_1, key_2, key_3);
@@ -779,6 +829,27 @@ namespace Lint {
 									std::cout << "clauText is not valid _ ID12" << ENTER;
 									return false;
 								}
+							}
+
+							// check justone, (onemore)
+							if (std::get<1>(temp).onemore == Option::OneMore_::JUSTONE) { // justone -> only for name! , not for value!
+								if (check_justone.find(std::make_pair(clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString(), std::string("ut"))) != check_justone.end()) {
+									std::cout << "clauText is not valid, justone is set, but not justone. 4" << ENTER;
+									return false;
+								}
+							}
+							else if (std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
+								if (ct_utCount < clautextUT->GetUserTypeListSize() - 1
+									&& i < schemaUT->GetUserTypeListSize()
+									&& clautextUT->GetUserTypeList(ct_utCount)->GetName() == clautextUT->GetUserTypeList(ct_utCount + 1)->GetName()
+									) {
+									if (1 != multiple_flag) {
+										--i; utCount--;
+									}
+								}
+							}
+							else {
+								//
 							}
 						}
 						else {
@@ -798,6 +869,7 @@ namespace Lint {
 						utCount--; i--;
 					}
 				}
+				
 				ct_utCount++;
 				utCount++;
 			}
