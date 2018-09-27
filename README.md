@@ -1,5 +1,6 @@
 # ClauLint
-
+        Next Project for ClauText, ClauText Schema Maker? and Validator ( check JsonLint )
+     
 # ToDo
         1. DONE - %multiple
         2. %can_empty (array)
@@ -10,8 +11,7 @@
         5. one_more 
         6. just_one
                 (5,6 => $list_size = { }) ?
-#               
-        Next Project for ClauText, ClauText Schema Maker? and Validator ( check JsonLint )
+  
         # - todo : Tokenizer in clautext?
         # token in 'abc def' with ""
         # -> a b c _ d e f ?
