@@ -29,7 +29,7 @@ namespace Lint {
 	public:
 		enum class Type_ { ANY, INT, FLOAT, QUOTED_STRING, STRING, DATETIME, DATETIME_A, DATETIME_B };
 
-		//enum class Id_ { NONE, ID, TOTAL_ID };
+		enum class Id_ { NONE, ID, TOTAL_ID };
 		//enum class Optional_ { NONE, OPTIONAL_ };
 		enum class OneMore_ { NONE, ONEMORE, JUSTONE };
 		enum class Required_ { REQUIRED, OPTIONAL_ };
@@ -39,7 +39,7 @@ namespace Lint {
 		enum class Multiple_ { NONE, OFF, ON };
 	public:
 		std::vector<Type_> type;
-		//Id_ id;
+		Id_ id;
 		//OneMore_ onemore;
 		EmptyUT_ empty_ut;
 		Required_ required;
@@ -59,10 +59,10 @@ namespace Lint {
 			this->type.push_back(type);
 			return *this;
 		}
-		//Option & Id(Id_ id) {
-		//	this->id = id;
-		//	return *this;
-		//}
+		Option & Id(Id_ id) {
+			this->id = id;
+			return *this;
+		}
 		//Option & Optional(Optional_ optional) {
 			//this->optional = optional;
 			//return *this;
@@ -142,9 +142,12 @@ namespace Lint {
 			else if ("%datetime_b" == opt) {
 				option.Type(Option::Type_::DATETIME_B);
 			}
-		//	else if ("%id" == opt) {
-		//		option.Id(Option::Id_::ID);
-		//	}
+			else if ("%id" == opt) {
+				option.Id(Option::Id_::ID);
+			}
+			else if ("%total_id" == opt) {
+				option.Id(Option::Id_::TOTAL_ID);
+			}
 			else if ("%any" == opt) {
 				option.Type(Option::Type_::ANY);
 			}
@@ -406,8 +409,11 @@ namespace Lint {
 		return { true, var_option };
 	}
 
+	// varaible!
+	std::set<std::tuple<std::string, std::string, std::string>> check_total_id;
+
 	bool Check(wiz::load_data::UserType* schema_eventUT, wiz::load_data::UserType* schemaUT,
-		const wiz::load_data::UserType* clautextUT)
+		const wiz::load_data::UserType* clautextUT, int depth)
 	{
 		Option::Order_ order = Option::Order_::OFF;
 		long long ct_itCount = 0; // for clautextUT?
@@ -418,10 +424,12 @@ namespace Lint {
 		long multiple_flag = 0; // 0 : no multiple, 1 : multiple
 
 		// for ORDER_::OFF
-		std::vector<bool> validVisit(schemaUT->GetIListSize(), false); // remove?
+		std::vector<bool> validVisit(schemaUT->GetIListSize(), false); 
 		std::vector<Option> varOptionVisit(schemaUT->GetIListSize()); // remove?
 		std::vector<bool> mark(clautextUT->GetItemListSize(), false); // ct_it
 		std::vector<bool> mark2(clautextUT->GetUserTypeListSize(), false); // ct_ut
+
+		std::set<std::pair<std::string, std::string>> check_id;
 
 		if (schemaUT->GetItemListSize() > 0 && schemaUT->GetItemList(itCount).ToString() == "%order_on") {
 			order = Option::Order_::ON;
@@ -436,6 +444,10 @@ namespace Lint {
 		
 		for (long long i = itCount; i < schemaUT->GetIListSize(); ++i) 
 		{
+			if (depth == 0) {
+				check_total_id.clear();
+			}
+
 			const bool chk_ct_it = ct_itCount < clautextUT->GetItemListSize();
 			const bool chk_ct_ut = ct_utCount < clautextUT->GetUserTypeListSize();
 
@@ -463,6 +475,65 @@ namespace Lint {
 							mark[j] = true;
 							
 							pass = true;
+							
+							// check id, total id!
+							if (std::get<1>(temp).id == Option::Id_::ID) {
+								const std::string key_1 = clautextUT->GetItemList(j).GetName().ToString();
+								const std::string key_2 = "it_name";
+								const std::pair<std::string, std::string> key(key_1, key_2);
+								
+								if (check_id.find(key) == check_id.end()) {
+									check_id.insert(key);
+								}
+								else {
+									std::cout << "clauText is not valid - ID1" << ENTER;
+									return false;
+								}
+							}
+							else if (std::get<1>(temp).id == Option::Id_::TOTAL_ID) {
+								const std::string key_1 = clautextUT->GetItemList(j).GetName().ToString();
+								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
+								const std::string key_3 = "it_name";
+
+								std::tuple<std::string, std::string, std::string> key(key_1, key_2, key_3);
+								
+								if (check_total_id.find(key) == check_total_id.end()) {
+									check_total_id.insert(key);
+								}
+								else {
+									std::cout << "clauText is not valid _ ID2" << ENTER;
+									return false;
+								}
+							}
+							if (std::get<2>(temp).id == Option::Id_::ID) {
+								const std::string key_1 = clautextUT->GetItemList(j).Get(0).ToString();
+								const std::string key_2 = "it_value";
+								const std::pair<std::string, std::string> key(key_1, key_2);
+
+								if (check_id.find(key) == check_id.end()) {
+									check_id.insert(key);
+								}
+								else {
+									std::cout << "clauText is not valid - ID3" << ENTER;
+									return false;
+								}
+							}
+							else if (std::get<2>(temp).id == Option::Id_::TOTAL_ID) {
+								const std::string key_1 = clautextUT->GetItemList(j).Get(0).ToString();
+								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
+								const std::string key_3 = "it_value";
+
+								std::tuple<std::string, std::string, std::string> key(key_1, key_2, key_3);
+
+								if (check_total_id.find(key) == check_total_id.end()) {
+									check_total_id.insert(key);
+								}
+								else {
+									std::cout << "clauText is not valid _ ID4" << ENTER;
+									return false;
+								}
+							}
+
 							break;
 						}
 					}
@@ -488,6 +559,64 @@ namespace Lint {
 
 					if (std::get<0>(temp)) {
 						validVisit[i] = true;
+						
+						// check id, total id!
+						if (std::get<1>(temp).id == Option::Id_::ID) {
+							const std::string key_1 = clautextUT->GetItemList(ct_itCount).GetName().ToString();
+							const std::string key_2 = "it_name";
+							const std::pair<std::string, std::string> key(key_1, key_2);
+
+							if (check_id.find(key) == check_id.end()) {
+								check_id.insert(key);
+							}
+							else {
+								std::cout << "clauText is not valid - ID5" << ENTER;
+								return false;
+							}
+						}
+						else if (std::get<1>(temp).id == Option::Id_::TOTAL_ID) {
+							const std::string key_1 = clautextUT->GetItemList(ct_itCount).GetName().ToString();
+							const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
+							const std::string key_3 = "it_name";
+
+							std::tuple<std::string, std::string, std::string> key(key_1, key_2, key_3);
+
+							if (check_total_id.find(key) == check_total_id.end()) {
+								check_total_id.insert(key);
+							}
+							else {
+								std::cout << "clauText is not valid _ ID6" << ENTER;
+								return false;
+							}
+						}
+						if (std::get<2>(temp).id == Option::Id_::ID) {
+							const std::string key_1 = clautextUT->GetItemList(ct_itCount).Get(0).ToString();
+							const std::string key_2 = "it_value";
+							const std::pair<std::string, std::string> key(key_1, key_2);
+
+							if (check_id.find(key) == check_id.end()) {
+								check_id.insert(key);
+							}
+							else {
+								std::cout << "clauText is not valid - ID7" << ENTER;
+								return false;
+							}
+						}
+						else if (std::get<2>(temp).id == Option::Id_::TOTAL_ID) {
+							const std::string key_1 = clautextUT->GetItemList(ct_itCount).Get(0).ToString();
+							const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
+							const std::string key_3 = "it_value";
+
+							std::tuple<std::string, std::string, std::string> key(key_1, key_2, key_3);
+
+							if (check_total_id.find(key) == check_total_id.end()) {
+								check_total_id.insert(key);
+							}
+							else {
+								std::cout << "clauText is not valid _ ID8" << ENTER;
+								return false;
+							}
+						}
 					}
 					else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
 						ct_itCount--;
@@ -496,6 +625,7 @@ namespace Lint {
 						std::cout << "clauText is not valid6" << ENTER;
 						return false;
 					}
+
 
 					if (1 == multiple_flag) {
 						itCount--; i--;
@@ -515,7 +645,7 @@ namespace Lint {
 							if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(j)->GetIListSize()) {
 								//
 							}
-							else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j))) {
+							else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j), depth + 1)) {
 								//
 							}
 							else {
@@ -529,6 +659,36 @@ namespace Lint {
 							mark2[j] = true;
 
 							pass = true;
+
+							// check id, total id!
+							if (std::get<1>(temp).id == Option::Id_::ID) {
+								const std::string key_1 = clautextUT->GetUserTypeList(j)->GetName().ToString();
+								const std::string key_2 = "ut_name";
+								const std::pair<std::string, std::string> key(key_1, key_2);
+
+								if (check_id.find(key) == check_id.end()) {
+									check_id.insert(key);
+								}
+								else {
+									std::cout << "clauText is not valid - ID5" << ENTER;
+									return false;
+								}
+							}
+							else if (std::get<1>(temp).id == Option::Id_::TOTAL_ID) {
+								const std::string key_1 = clautextUT->GetUserTypeList(j)->GetName().ToString();
+								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
+								const std::string key_3 = "ut_name";
+
+								std::tuple<std::string, std::string, std::string> key(key_1, key_2, key_3);
+
+								if (check_total_id.find(key) == check_total_id.end()) {
+									check_total_id.insert(key);
+								}
+								else {
+									std::cout << "clauText is not valid _ ID6" << ENTER;
+									return false;
+								}
+							}
 							break;
 						}
 					}
@@ -559,8 +719,38 @@ namespace Lint {
 						if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(ct_utCount)->GetIListSize()) {
 
 						}
-						else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount))) {
+						else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount), depth + 1)) {
 							validVisit[i] = true;
+
+							// check id, total id!
+							if (std::get<1>(temp).id == Option::Id_::ID) {
+								const std::string key_1 = clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString();
+								const std::string key_2 = "ut_name";
+								const std::pair<std::string, std::string> key(key_1, key_2);
+
+								if (check_id.find(key) == check_id.end()) {
+									check_id.insert(key);
+								}
+								else {
+									std::cout << "clauText is not valid - ID5" << ENTER;
+									return false;
+								}
+							}
+							else if (std::get<1>(temp).id == Option::Id_::TOTAL_ID) {
+								const std::string key_1 = clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString();
+								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
+								const std::string key_3 = "ut_name";
+
+								std::tuple<std::string, std::string, std::string> key(key_1, key_2, key_3);
+
+								if (check_total_id.find(key) == check_total_id.end()) {
+									check_total_id.insert(key);
+								}
+								else {
+									std::cout << "clauText is not valid _ ID6" << ENTER;
+									return false;
+								}
+							}
 						}
 						else {
 							std::cout << "clauText is not valid11" << ENTER;
@@ -675,7 +865,7 @@ namespace Lint {
 
 		clautextUT = wiz::load_data::UserType::Find(&schema_eventUT, start_name, &builder).second[0];
 		//
-		const bool chk = Check(&schema_eventUT, &schemaUT, clautextUT);
+		const bool chk = Check(&schema_eventUT, &schemaUT, clautextUT, 0);
 
 		//// debug
 		//std::cout << schema_eventUT.ToString() << ENTER
