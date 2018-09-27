@@ -4,9 +4,9 @@
         1. DONE - %multiple
         2. %can_empty (array)
         
-        3. id
-        4. total_id
-                (3,4 => use $Event ?
+        3. DONE? - id
+        4. DONE? - total_id
+                
         5. one_more 
         6. just_one
                 (5,6 => $list_size = { }) ?
