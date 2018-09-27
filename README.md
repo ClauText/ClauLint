@@ -6,7 +6,7 @@
         
         3. id
         4. total_id
-        
+                (3,4 => use $Event ?
         5. one_more 
         6. just_one
                 (5,6 => $list_size = { }) ?
