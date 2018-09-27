@@ -7,7 +7,8 @@
         
         3. DONE? - id
         4. DONE? - total_id
-                
+                (do not check total_id, if depth == 0)?? 
+                (check id, if depth == 0) !?
         5. one_more 
         6. just_one
                 (5,6 => $list_size = { }) ?
