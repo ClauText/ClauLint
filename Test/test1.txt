@@ -27,12 +27,21 @@ $Event = {
 	
 	$print = { data = { "init end.." } }
 	$print = { enter = { \n } }
+	
+	$return = { test2 } # returns data folder?
 }
 
 $Event = {
 	id = aaa
 	
-	$parameter = { name is_usertype real_dir } # ToDo - real_dir
+	$parameter = { name is_usertype real_dir } # real_dir - ToDo! 
+	
+	$print = { { $parameter.is_usertype } }
+	$print = { { \n } }
+	$print = { { $parameter.name } }
+	$print = { { \n } }
+	$print = { { $parameter.real_dir } }
+	$print = { { \n } }
 	
 	$if = { 
 		cond = {
@@ -51,7 +60,7 @@ yyy = 3
 
 x = { # %multiple_on + one ut. and repeating this can`t.
 	a%can_empty_ut = { %order_on %multiple_on 
-				%can_empty_ut%int%event_aaa = { %order_on  %multiple_on %int } }  
+				%can_empty_ut%int%event_aaa = { %order_on  %multiple_on %int%total_id } }  
 			# cf) number of int?
 }
 
