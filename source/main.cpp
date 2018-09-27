@@ -476,7 +476,7 @@ namespace Lint {
 							
 							pass = true;
 							
-							// check id, total id!
+							// check id, total id! 
 							if (std::get<1>(temp).id == Option::Id_::ID) {
 								const std::string key_1 = clautextUT->GetItemList(j).GetName().ToString();
 								const std::string key_2 = "it_name";
@@ -491,6 +491,10 @@ namespace Lint {
 								}
 							}
 							else if (std::get<1>(temp).id == Option::Id_::TOTAL_ID) {
+								if (0 == depth) {
+									std::cout << "ERROR schema is not valid1" << ENTER;
+									return false;
+								}
 								const std::string key_1 = clautextUT->GetItemList(j).GetName().ToString();
 								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
 								const std::string key_3 = "it_name";
@@ -519,6 +523,11 @@ namespace Lint {
 								}
 							}
 							else if (std::get<2>(temp).id == Option::Id_::TOTAL_ID) {
+								if (0 == depth) {
+									std::cout << "ERROR schema is not valid2" << ENTER;
+									return false;
+								}
+
 								const std::string key_1 = clautextUT->GetItemList(j).Get(0).ToString();
 								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
 								const std::string key_3 = "it_value";
@@ -575,6 +584,11 @@ namespace Lint {
 							}
 						}
 						else if (std::get<1>(temp).id == Option::Id_::TOTAL_ID) {
+							if (0 == depth) {
+								std::cout << "ERROR schema is not valid3" << ENTER;
+								return false;
+							}
+							
 							const std::string key_1 = clautextUT->GetItemList(ct_itCount).GetName().ToString();
 							const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
 							const std::string key_3 = "it_name";
@@ -603,6 +617,11 @@ namespace Lint {
 							}
 						}
 						else if (std::get<2>(temp).id == Option::Id_::TOTAL_ID) {
+							if (0 == depth) {
+								std::cout << "ERROR schema is not valid4" << ENTER; // use id!
+								return false;
+							}
+
 							const std::string key_1 = clautextUT->GetItemList(ct_itCount).Get(0).ToString();
 							const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
 							const std::string key_3 = "it_value";
@@ -670,11 +689,16 @@ namespace Lint {
 									check_id.insert(key);
 								}
 								else {
-									std::cout << "clauText is not valid - ID5" << ENTER;
+									std::cout << "clauText is not valid - ID9" << ENTER;
 									return false;
 								}
 							}
 							else if (std::get<1>(temp).id == Option::Id_::TOTAL_ID) {
+								if (0 == depth) {
+									std::cout << "ERROR schema is not valid5" << ENTER;
+									return false;
+								}
+								
 								const std::string key_1 = clautextUT->GetUserTypeList(j)->GetName().ToString();
 								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
 								const std::string key_3 = "ut_name";
@@ -685,7 +709,7 @@ namespace Lint {
 									check_total_id.insert(key);
 								}
 								else {
-									std::cout << "clauText is not valid _ ID6" << ENTER;
+									std::cout << "clauText is not valid _ ID10" << ENTER;
 									return false;
 								}
 							}
@@ -732,11 +756,16 @@ namespace Lint {
 									check_id.insert(key);
 								}
 								else {
-									std::cout << "clauText is not valid - ID5" << ENTER;
+									std::cout << "clauText is not valid - ID11" << ENTER;
 									return false;
 								}
 							}
 							else if (std::get<1>(temp).id == Option::Id_::TOTAL_ID) {
+								if (0 == depth) {
+									std::cout << "ERROR schema is not valid6" << ENTER;
+									return false;
+								}
+								
 								const std::string key_1 = clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString();
 								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(clautextUT->GetName().ToString(), clautextUT, &builder);
 								const std::string key_3 = "ut_name";
@@ -747,7 +776,7 @@ namespace Lint {
 									check_total_id.insert(key);
 								}
 								else {
-									std::cout << "clauText is not valid _ ID6" << ENTER;
+									std::cout << "clauText is not valid _ ID12" << ENTER;
 									return false;
 								}
 							}
