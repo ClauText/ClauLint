@@ -1,6 +1,6 @@
 # ClauLint
         Next Project for ClauText, ClauText Schema Maker? and Validator ( check JsonLint )
-     
+        With ClauText API?
 # ToDo
         1. DONE - %multiple
         2. %can_empty (array)
