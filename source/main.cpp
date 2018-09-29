@@ -561,6 +561,7 @@ namespace Lint {
 
 						if (var_option.prefix.empty() == false && var_option.required == Option::Required_::OPTIONAL_) {
 							ct_itCount--;
+							validVisit[i] = true;
 						}
 						else {
 							std::cout << "clauText is not valid4" << ENTER;
@@ -669,6 +670,7 @@ namespace Lint {
 					}
 					else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
 						ct_itCount--;
+						validVisit[i] = true;
 					}
 					else {
 						std::cout << "clauText is not valid6" << ENTER;
@@ -767,6 +769,8 @@ namespace Lint {
 
 						if (var_option.prefix.empty() == false && var_option.required == Option::Required_::OPTIONAL_) {
 							ct_utCount--;
+
+							validVisit[i] = true;
 						}
 						else {
 							std::cout << "clauText is not valid9 " << schemaUT->GetUserTypeList(utCount)->GetName().ToString() << ENTER;
@@ -789,7 +793,7 @@ namespace Lint {
 						wiz::load_data::LoadData::GetRealDir(clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString(), clautextUT->GetUserTypeList(ct_utCount), &builder)
 					);
 
-					if (std::get<0>( temp)) {
+					if (std::get<0>(temp)) {
 						if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(ct_utCount)->GetIListSize()) {
 
 						}
@@ -851,6 +855,10 @@ namespace Lint {
 							else {
 								//
 							}
+						}
+						else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
+							ct_utCount--;
+							validVisit[i] = true;
 						}
 						else {
 							std::cout << "clauText is not valid11" << ENTER;
