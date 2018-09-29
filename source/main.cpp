@@ -867,6 +867,7 @@ namespace Lint {
 					}
 					else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
 						ct_utCount--;
+						validVisit[i] = true;
 					}
 					else {
 						std::cout << "clauText is not valid12" << ENTER;
