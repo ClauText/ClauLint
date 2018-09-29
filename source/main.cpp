@@ -99,21 +99,24 @@ namespace Lint {
 		std::string::size_type start = 0;
 		std::string::size_type find_percent = std::string::npos; // % : delimeter.
 
-		if (option_str.find('%', start) == std::string::npos)
+		if ((find_percent = option_str.find('%', start)) == std::string::npos)
 		{
 			option.prefix = option_str;
 		}
+		else {
+			option.prefix = option_str.substr(start, find_percent - start);
+		}
+
 		while ((find_percent = option_str.find('%', start)) != std::string::npos) 
 		{
 			std::string::size_type end_ = option_str.find('%', find_percent + 1);
+			
 			start = find_percent; // ex) abc%id?
+			
 			if (end_ == std::string::npos) {
 				end_ = option_str.size();
 			}
-			if (start != find_percent) {
-				option.prefix = option_str.substr(0, end_ - 1 - start + 1);
-			}
-
+			
 			const std::string opt = option_str.substr(start, end_ - 1 - start + 1);
 
 			if ("%int" == opt) {
@@ -556,10 +559,10 @@ namespace Lint {
 						}
 					}
 
-					if (false == pass && clautextUT->GetItemListSize() > 0) {
+					if (false == pass && clautextUT->GetItemListSize() >= 0) {
 						Option var_option = OptionFrom(schemaUT->GetItemList(itCount).GetName().ToString());
 
-						if (var_option.prefix.empty() == false && var_option.required == Option::Required_::OPTIONAL_) {
+						if (var_option.required == Option::Required_::OPTIONAL_) {
 							ct_itCount--;
 							validVisit[i] = true;
 						}
@@ -700,6 +703,10 @@ namespace Lint {
 							else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j), depth + 1)) {
 								//
 							}
+							else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
+								ct_utCount--;
+								validVisit[i] = true;
+							}
 							else {
 								std::cout << "clauText is not valid8" << ENTER;
 								return false;
@@ -764,10 +771,10 @@ namespace Lint {
 							}
 						}
 					}
-					if (false == pass && clautextUT->GetUserTypeListSize() > 0) {
+					if (false == pass && clautextUT->GetUserTypeListSize() >= 0) {
 						Option var_option = OptionFrom(schemaUT->GetUserTypeList(utCount)->GetName().ToString());
 
-						if (var_option.prefix.empty() == false && var_option.required == Option::Required_::OPTIONAL_) {
+						if (var_option.required == Option::Required_::OPTIONAL_) {
 							ct_utCount--;
 
 							validVisit[i] = true;
@@ -795,7 +802,7 @@ namespace Lint {
 
 					if (std::get<0>(temp)) {
 						if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(ct_utCount)->GetIListSize()) {
-
+							//
 						}
 						else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount), depth + 1)) {
 							validVisit[i] = true;
