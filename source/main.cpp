@@ -659,7 +659,7 @@ namespace Lint {
 						}
 						else if (std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
 							if (ct_itCount < clautextUT->GetItemListSize() - 1
-								&& i < schemaUT->GetItemListSize()- 1
+								&& itCount < schemaUT->GetItemListSize()- 1
 								&& clautextUT->GetItemList(ct_itCount).GetName() == clautextUT->GetItemList(ct_itCount + 1).GetName()
 							) {
 								if (1 != multiple_flag) {
@@ -851,7 +851,7 @@ namespace Lint {
 							}
 							else if (std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
 								if (ct_utCount < clautextUT->GetUserTypeListSize() - 1
-									&& i < schemaUT->GetUserTypeListSize()
+									&& utCount < schemaUT->GetUserTypeListSize()
 									&& clautextUT->GetUserTypeList(ct_utCount)->GetName() == clautextUT->GetUserTypeList(ct_utCount + 1)->GetName()
 									) {
 									if (1 != multiple_flag) {
