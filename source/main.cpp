@@ -559,7 +559,7 @@ namespace Lint {
 						}
 					}
 
-					if (false == pass && clautextUT->GetItemListSize() >= 0) {
+					if (false == pass) {
 						Option var_option = OptionFrom(schemaUT->GetItemList(itCount).GetName().ToString());
 
 						if (var_option.required == Option::Required_::OPTIONAL_) {
@@ -771,7 +771,7 @@ namespace Lint {
 							}
 						}
 					}
-					if (false == pass && clautextUT->GetUserTypeListSize() >= 0) {
+					if (false == pass) {
 						Option var_option = OptionFrom(schemaUT->GetUserTypeList(utCount)->GetName().ToString());
 
 						if (var_option.required == Option::Required_::OPTIONAL_) {
