@@ -659,7 +659,7 @@ namespace Lint {
 						}
 						else if (std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
 							if (ct_itCount < clautextUT->GetItemListSize() - 1
-								&& itCount < schemaUT->GetItemListSize()- 1
+								&& itCount < schemaUT->GetItemListSize()
 								&& clautextUT->GetItemList(ct_itCount).GetName() == clautextUT->GetItemList(ct_itCount + 1).GetName()
 							) {
 								if (1 != multiple_flag) {
