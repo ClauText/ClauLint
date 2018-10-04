@@ -306,6 +306,8 @@ namespace Lint {
 					" name = " + y.GetName().ToString() + " value = " + y.Get(0).ToString() +
 					" is_usertype = FALSE " +
 					" real_dir = " + real_dir +
+					" select = NAME " +
+					" input = " + y.GetName().ToString() +
 					" } }",
 					"TRUE", wiz::ExcuteData(), &builder);
 
@@ -326,7 +328,9 @@ namespace Lint {
 					"Event = { id = __" + event_name + "__ $call = { id = " + event_name +
 					" name = " + y.GetName().ToString() + " value = " + y.Get(0).ToString() +
 					" is_usertype = FALSE " +
-					" real_dir = " + real_dir + 
+					" real_dir = " + real_dir +
+					" select = VALUE " +
+					" input = " + y.Get(0).ToString() +
 					" } }",
 					"TRUE", wiz::ExcuteData(), &builder);
 
@@ -386,6 +390,8 @@ namespace Lint {
 					" name = " + y->GetName().ToString() +
 					" is_usertype = TRUE " +
 					" real_dir = " + real_dir +
+					" select = NAME " +
+					" input = " + y->GetName().ToString() +
 					"}  } ",
 					"TRUE", wiz::ExcuteData(), &builder);
 
@@ -452,6 +458,10 @@ namespace Lint {
 
 			if (schemaUT->IsItemList(i)) {
 				if (schemaUT->GetItemList(itCount).ToString() == "%multiple_on") {
+					if (order == Option::Order_::OFF) {
+						std::cout << "to do %multple_on, need to %order_on!" << ENTER;
+						return false;
+					}
 					multiple_flag = 1;
 					validVisit[itCount] = true;
 					itCount++;
@@ -1022,8 +1032,8 @@ namespace Lint {
 int main(int argc, char* argv[])
 {
 	std::string option;
-	wiz::load_data::UserType schema; // argv[3]?
-	wiz::load_data::UserType clautext; // argv[2]
+	wiz::load_data::UserType schema; // argv[2]?
+	wiz::load_data::UserType clautext; // argv[3]
 	std::string fileName; // to save
 
 	// -v : version? - to do
