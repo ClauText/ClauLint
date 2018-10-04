@@ -463,7 +463,7 @@ namespace Lint {
 						return false;
 					}
 					multiple_flag = 1;
-					validVisit[itCount] = true;
+					validVisit[i] = true;
 					itCount++;
 					continue;
 				}
@@ -557,6 +557,9 @@ namespace Lint {
 								if (check_justone.find(std::make_pair(clautextUT->GetItemList(j).GetName().ToString(), std::string("it"))) != check_justone.end()) {
 									std::cout << "clauText is not valid, justone is set, but not justone. 1" << ENTER;
 									return false;
+								}
+								else {
+									check_justone.insert(std::make_pair(clautextUT->GetItemList(j).GetName().ToString(), std::string("it")));
 								}
 								break;
 							}
@@ -666,6 +669,9 @@ namespace Lint {
 								std::cout << "clauText is not valid, justone is set, but not justone. 2" << ENTER;
 								return false;
 							}	
+							else {
+								check_justone.insert(std::make_pair(clautextUT->GetItemList(ct_itCount).GetName().ToString(), std::string("it")));
+							}
 						}
 						else if (std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
 							if (ct_itCount < clautextUT->GetItemListSize() - 1
@@ -770,6 +776,9 @@ namespace Lint {
 									std::cout << "clauText is not valid, justone is set, but not justone. 3" << ENTER;
 									return false;
 								}
+								else {
+									check_justone.insert(std::make_pair(clautextUT->GetUserTypeList(j)->GetName().ToString(), std::string("ut")));
+								}
 								break;
 							}
 							else if (std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
@@ -857,6 +866,9 @@ namespace Lint {
 								if (check_justone.find(std::make_pair(clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString(), std::string("ut"))) != check_justone.end()) {
 									std::cout << "clauText is not valid, justone is set, but not justone. 4" << ENTER;
 									return false;
+								}
+								else {
+									check_justone.insert(std::make_pair(clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString(), std::string("ut")));
 								}
 							}
 							else if (std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
