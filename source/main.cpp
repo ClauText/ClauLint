@@ -434,7 +434,6 @@ namespace Lint {
 		std::vector<bool> mark2(clautextUT->GetUserTypeListSize(), false); // ct_ut
 
 		std::set<std::pair<std::string, std::string>> check_id;
-		std::set<std::pair<std::string, std::string>> check_justone;
 
 		if (schemaUT->GetItemListSize() > 0 && schemaUT->GetItemList(itCount).ToString() == "%order_on") {
 			order = Option::Order_::ON;
@@ -473,6 +472,9 @@ namespace Lint {
 					bool pass = false;
 					std::tuple<bool, Option, Option> temp; 
 									// schemaUT?
+
+					int chk_justone = 0;
+
 					for (long long j = 0; j < clautextUT->GetItemListSize(); ++j) {
 						temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(j), wiz::load_data::LoadData::GetRealDir(clautextUT->GetItemList(j).GetName().ToString(), clautextUT, &builder));
 						if (mark[j] == false && 
@@ -554,12 +556,12 @@ namespace Lint {
 
 							// check justone, (onemore)
 							if (std::get<1>(temp).onemore == Option::OneMore_::JUSTONE) { // justone -> only for name! , not for value!
-								if (check_justone.find(std::make_pair(clautextUT->GetItemList(j).GetName().ToString(), std::string("it"))) != check_justone.end()) {
+								if (chk_justone > 0) {
 									std::cout << "clauText is not valid, justone is set, but not justone. 1" << ENTER;
 									return false;
 								}
 								else {
-									check_justone.insert(std::make_pair(clautextUT->GetItemList(j).GetName().ToString(), std::string("it")));
+									chk_justone++;
 								}
 								break;
 							}
@@ -591,6 +593,7 @@ namespace Lint {
 					}
 					std::tuple<bool, Option, Option> temp;
 					temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(ct_itCount), wiz::load_data::LoadData::GetRealDir(clautextUT->GetItemList(ct_itCount).GetName().ToString(), clautextUT, &builder));
+					int chk_justone = 0;
 
 					if (std::get<0>(temp)) {
 						validVisit[i] = true;
@@ -665,12 +668,12 @@ namespace Lint {
 
 						// check justone, (onemore)
 						if (std::get<1>(temp).onemore == Option::OneMore_::JUSTONE) { // justone -> only for name! , not for value!
-							if (check_justone.find(std::make_pair(clautextUT->GetItemList(ct_itCount).GetName().ToString(), std::string("it"))) != check_justone.end()) {
+							if (chk_justone > 0) {
 								std::cout << "clauText is not valid, justone is set, but not justone. 2" << ENTER;
 								return false;
-							}	
+							}
 							else {
-								check_justone.insert(std::make_pair(clautextUT->GetItemList(ct_itCount).GetName().ToString(), std::string("it")));
+								chk_justone++;
 							}
 						}
 						else if (std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
@@ -710,6 +713,7 @@ namespace Lint {
 					bool pass = false;
 					bool use_onemore = false;
 					std::tuple<bool, Option> temp;
+					int chk_justone = 0;
 
 					for (long long j = 0; j < clautextUT->GetUserTypeListSize(); ++j) {
 						if (mark2[j] == false && std::get<0>(temp = _Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j), wiz::load_data::LoadData::GetRealDir(clautextUT->GetUserTypeList(j)->GetName().ToString(), clautextUT->GetUserTypeList(j), &builder)))) {
@@ -772,12 +776,12 @@ namespace Lint {
 
 							// check justone, (onemore)
 							if (std::get<1>(temp).onemore == Option::OneMore_::JUSTONE) { // justone -> only for name! , not for value!
-								if (check_justone.find(std::make_pair(clautextUT->GetUserTypeList(j)->GetName().ToString(), std::string("ut"))) != check_justone.end()) {
+								if (chk_justone > 0) {
 									std::cout << "clauText is not valid, justone is set, but not justone. 3" << ENTER;
 									return false;
 								}
 								else {
-									check_justone.insert(std::make_pair(clautextUT->GetUserTypeList(j)->GetName().ToString(), std::string("ut")));
+									chk_justone++;
 								}
 								break;
 							}
@@ -818,7 +822,8 @@ namespace Lint {
 						schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount),
 						wiz::load_data::LoadData::GetRealDir(clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString(), clautextUT->GetUserTypeList(ct_utCount), &builder)
 					);
-
+					int chk_justone = 0;
+						
 					if (std::get<0>(temp)) {
 						if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(ct_utCount)->GetIListSize()) {
 							//
@@ -863,12 +868,12 @@ namespace Lint {
 
 							// check justone, (onemore)
 							if (std::get<1>(temp).onemore == Option::OneMore_::JUSTONE) { // justone -> only for name! , not for value!
-								if (check_justone.find(std::make_pair(clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString(), std::string("ut"))) != check_justone.end()) {
+								if (chk_justone > 0) {
 									std::cout << "clauText is not valid, justone is set, but not justone. 4" << ENTER;
 									return false;
 								}
 								else {
-									check_justone.insert(std::make_pair(clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString(), std::string("ut")));
+									chk_justone++;
 								}
 							}
 							else if (std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
