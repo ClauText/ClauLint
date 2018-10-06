@@ -30,7 +30,7 @@ namespace Lint {
 		enum class Type_ { ANY, INT, FLOAT, QUOTED_STRING, STRING, DATETIME, DATETIME_A, DATETIME_B };
 
 		enum class Id_ { NONE, ID, TOTAL_ID };
-		enum class OneMore_ { ONEMORE, JUSTONE };
+		enum class OneMore_ { NONE, ONEMORE, JUSTONE };
 		enum class Required_ { REQUIRED, OPTIONAL_ };
 		enum class EmptyUT_ { NONE, OFF, ON };
 
@@ -89,12 +89,6 @@ namespace Lint {
 
 	Option OptionFrom(const std::string& option_str)
 	{
-		if (option_str.empty()) {
-			Option temp;
-			temp.type.push_back(Option::Type_::ANY);
-			return temp; // or throw error?
-		}
-
 		Option option;
 		std::string::size_type start = 0;
 		std::string::size_type find_percent = std::string::npos; // % : delimeter.
@@ -107,16 +101,16 @@ namespace Lint {
 			option.prefix = option_str.substr(start, find_percent - start);
 		}
 
-		while ((find_percent = option_str.find('%', start)) != std::string::npos) 
+		while ((find_percent = option_str.find('%', start)) != std::string::npos)
 		{
 			std::string::size_type end_ = option_str.find('%', find_percent + 1);
-			
+
 			start = find_percent; // ex) abc%id?
-			
+
 			if (end_ == std::string::npos) {
 				end_ = option_str.size();
 			}
-			
+
 			const std::string opt = option_str.substr(start, end_ - 1 - start + 1);
 
 			if ("%int" == opt) {
@@ -183,7 +177,7 @@ namespace Lint {
 	}
 
 	// chk valid in here!
-	inline bool OptionDoA(const Option& option, const std::string& str) 
+	inline bool OptionDoA(const Option& option, const std::string& str)
 	{
 		if (option.prefix.empty() == false &&
 			option.prefix == str) {
@@ -193,7 +187,7 @@ namespace Lint {
 			option.prefix != str) {
 			return false;
 		}
-		
+
 		long long count = option.type.size();
 		auto type_list = option.type;
 
@@ -266,7 +260,7 @@ namespace Lint {
 		return count > 0;
 	}
 
-	std::tuple<bool, Option, Option> _Check(wiz::load_data::UserType* schema_eventUT, 
+	std::tuple<bool, Option, Option> _Check(wiz::load_data::UserType* schema_eventUT,
 		const wiz::load_data::ItemType<WIZ_STRING_TYPE>& x, const wiz::load_data::ItemType<WIZ_STRING_TYPE>& y, const std::string& real_dir) //, Order?
 	{
 		const Option var_option = OptionFrom(x.GetName().ToString()); // name, value check - not start with % ??
@@ -289,14 +283,14 @@ namespace Lint {
 		// option type check.
 		const bool name_do = OptionDoA(var_option, y.GetName().ToString());
 		const bool val_do = OptionDoA(val_option, y.Get(0).ToString());
-		
+
 		if (name_do && val_do) {
 			// event check.
 			wiz::ClauText clauText;
 			wiz::StringTokenizer tokenizer(var_option.event_ids, &builder);
 			wiz::StringTokenizer tokenizer2(val_option.event_ids, &builder);
 			std::string event_name;
-			
+
 			while (tokenizer.hasMoreTokens()) {
 				event_name = tokenizer.nextToken();
 
@@ -354,7 +348,7 @@ namespace Lint {
 
 	std::tuple<bool, Option> _Check(wiz::load_data::UserType* schema_eventUT,
 		const wiz::load_data::UserType* x, const wiz::load_data::UserType* y, const std::string& real_dir // Order?
-		) 
+	)
 	{
 		Option var_option = OptionFrom(x->GetName().ToString()); // name, value check - not start with % ??
 
@@ -417,46 +411,49 @@ namespace Lint {
 	std::set<std::tuple<std::string, std::string, std::string>> check_total_id;
 
 	bool Check(wiz::load_data::UserType* schema_eventUT, wiz::load_data::UserType* schemaUT,
-		const wiz::load_data::UserType* clautextUT, int depth)
+		const wiz::load_data::UserType* clautextUT, int depth, bool& log_on)
 	{
 		Option::Order_ order = Option::Order_::OFF;
-		long long ct_itCount = 0; // for clautextUT?
-		long long ct_utCount = 0; // for clautextUT?
+		long long jt_itCount = 0; // for clautextUT?
+		long long jt_utCount = 0; // for clautextUT?
 		long long itCount = 0;
 		long long utCount = 0;
 
-		long multiple_flag = 0; // 0 : no multiple, 1 : multiple - only arr of item, or arr of usertype.
+		long multiple_flag = 0; // 0 : no multiple, 1 : multiple
 
 		// for ORDER_::OFF
-		std::vector<bool> validVisit(schemaUT->GetIListSize(), false); 
+		std::vector<bool> validVisit(schemaUT->GetIListSize(), false);
 		std::vector<Option> varOptionVisit(schemaUT->GetIListSize()); // remove?
 		std::vector<bool> mark(clautextUT->GetItemListSize(), false); // ct_it
 		std::vector<bool> mark2(clautextUT->GetUserTypeListSize(), false); // ct_ut
 
 		std::set<std::pair<std::string, std::string>> check_id;
 
-		if (schemaUT->GetItemListSize() > 0 && schemaUT->GetItemList(itCount).ToString() == "%order_on") {
-			order = Option::Order_::ON;
-			validVisit[itCount] = true;
-			itCount++;
-		}
-		else if (schemaUT->GetItemListSize() > 0 && schemaUT->GetItemList(itCount).ToString() == "%order_off") {
-			order = Option::Order_::OFF;
-			validVisit[itCount] = true;
-			itCount++;
-		}
-		
-		for (long long i = itCount; i < schemaUT->GetIListSize(); ++i) 
+		int multiple_run = 0; // 1 - it(itemtype) run, 2 - ut(usertype) run.
+
+		for (long long i = 0; i < schemaUT->GetIListSize(); ++i)
 		{
-			if (depth == 0) {
+			if (depth == 0) { // chk - clauText`s depth >= 1 ( { ~~ } )
 				check_total_id.clear();
 			}
 
-			const bool chk_ct_it = ct_itCount < clautextUT->GetItemListSize();
-			const bool chk_ct_ut = ct_utCount < clautextUT->GetUserTypeListSize();
+			const bool chk_ct_it = jt_itCount < clautextUT->GetItemListSize();
+			const bool chk_ct_ut = jt_utCount < clautextUT->GetUserTypeListSize();
 
 			if (schemaUT->IsItemList(i)) {
-				if (schemaUT->GetItemList(itCount).ToString() == "%multiple_on") {
+				if (schemaUT->GetItemListSize() > 0 && schemaUT->GetItemList(itCount).ToString() == "%order_on") {
+					order = Option::Order_::ON;
+					validVisit[i] = true;
+					itCount++;
+					continue;
+				}
+				else if (schemaUT->GetItemList(itCount).ToString() == "%order_off") {
+					order = Option::Order_::OFF;
+					validVisit[i] = true;
+					itCount++;
+					continue;
+				}
+				else if (schemaUT->GetItemList(itCount).ToString() == "%multiple_on") {
 					if (order == Option::Order_::OFF) {
 						std::cout << "to do %multple_on, need to %order_on!" << ENTER;
 						return false;
@@ -466,33 +463,72 @@ namespace Lint {
 					itCount++;
 					continue;
 				}
+				else if (schemaUT->GetItemList(itCount).ToString() == "%multiple_off") {
+					if (order == Option::Order_::OFF) {
+						std::cout << "to do %multple_off, need to %order_on!" << ENTER;
+						return false;
+					}
+					multiple_flag = 0;
+					multiple_run = 0;
+					validVisit[i] = true;
+					itCount++;
+					continue;
+				}
+				else if (schemaUT->GetItemList(itCount).ToString() == "%log_on") {
+					log_on = true;
+					validVisit[i] = true;
+					itCount++;
+					continue;
+				}
+				else if (schemaUT->GetItemList(itCount).ToString() == "%log_off") {
+					log_on = false;
+					validVisit[i] = true;
+					itCount++;
+					continue;
+				}
+
+
+				// log
+				if (log_on && (order == Option::Order_::OFF)) {
+					std::cout << ENTER << "<itemtype> ";
+					std::cout << "[depth] : " << depth << " ";
+					std::cout << "[~th] : " << itCount << " ";
+					std::cout << "[schema] : " << schemaUT->GetItemList(itCount).ToString() << " ";
+				}
 
 				// off -> no order? : slow??
 				if (order == Option::Order_::OFF) {
 					bool pass = false;
-					std::tuple<bool, Option, Option> temp; 
-									// schemaUT?
+					bool use_onemore = false;
+					std::tuple<bool, Option, Option> temp;
 
-					int chk_justone = 0;
+					int check_justone = 0;
 
+					// schemaUT?
 					for (long long j = 0; j < clautextUT->GetItemListSize(); ++j) {
+						if (log_on) {
+							std::cout << ENTER << "\t" << "[clauText ~th] : " << j << " "
+								<< "[clautext] : " << clautextUT->GetItemList(j).ToString() << ENTER;
+						}
+
 						temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(j), wiz::load_data::LoadData::GetRealDir(clautextUT->GetItemList(j).GetName().ToString(), clautextUT, &builder));
-						if (mark[j] == false && 
-								std::get<0>(temp)
-						) {
+
+						if (mark[j] == false &&
+							std::get<0>(temp)
+							) {
 							// visit vector? chk?
 							validVisit[i] = true;
 							varOptionVisit[i] = std::get<1>(temp);
 							mark[j] = true;
-							
+
 							pass = true;
-							
+
 							// check id, total id! 
 							if (std::get<1>(temp).id == Option::Id_::ID) {
 								const std::string key_1 = clautextUT->GetItemList(j).GetName().ToString();
 								const std::string key_2 = "it_name";
 								const std::pair<std::string, std::string> key(key_1, key_2);
-								
+
 								if (check_id.find(key) == check_id.end()) {
 									check_id.insert(key);
 								}
@@ -511,7 +547,7 @@ namespace Lint {
 								const std::string key_3 = "it_name";
 
 								std::tuple<std::string, std::string, std::string> key(key_1, key_2, key_3);
-								
+
 								if (check_total_id.find(key) == check_total_id.end()) {
 									check_total_id.insert(key);
 								}
@@ -556,20 +592,17 @@ namespace Lint {
 
 							// check justone, (onemore)
 							if (std::get<1>(temp).onemore == Option::OneMore_::JUSTONE) { // justone -> only for name! , not for value!
-								if (chk_justone > 0) {
+								if (check_justone > 0) {
 									std::cout << "clauText is not valid, justone is set, but not justone. 1" << ENTER;
 									return false;
 								}
 								else {
-									chk_justone++;
+									check_justone++;
 								}
-								break;
-							}
-							else if(std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
-								//
 							}
 							else {
-								break;
+								jt_itCount++;
+								use_onemore = true;
 							}
 						}
 					}
@@ -577,8 +610,8 @@ namespace Lint {
 					if (false == pass) {
 						Option var_option = OptionFrom(schemaUT->GetItemList(itCount).GetName().ToString());
 
-						if (var_option.required == Option::Required_::OPTIONAL_) {
-							ct_itCount--;
+						if (var_option.required == Option::Required_::OPTIONAL_) { // optional -> only for name
+							jt_itCount--;
 							validVisit[i] = true;
 						}
 						else {
@@ -586,21 +619,40 @@ namespace Lint {
 							return false;
 						}
 					}
+
+					if (use_onemore) {
+						jt_itCount--;
+					}
 				}
 				else if (order == Option::Order_::ON) {
 					if (!chk_ct_it) {
-						break;
+						std::cout << "chk_ct_it is false" << ENTER;
+
+						if (1 == multiple_run) {
+							itCount++;
+							continue;
+						}
+						else {
+							break;
+						}
 					}
+
+					if (log_on) {
+						std::cout << "[clauText ~th] : " << jt_itCount << " "
+							<< "[clautext] : " << clautextUT->GetItemList(jt_itCount).ToString() << ENTER;
+					}
+
+					int check_justone = 0;
+
 					std::tuple<bool, Option, Option> temp;
-					temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(ct_itCount), wiz::load_data::LoadData::GetRealDir(clautextUT->GetItemList(ct_itCount).GetName().ToString(), clautextUT, &builder));
-					int chk_justone = 0;
+					temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(jt_itCount), wiz::load_data::LoadData::GetRealDir(clautextUT->GetItemList(jt_itCount).GetName().ToString(), clautextUT, &builder));
 
 					if (std::get<0>(temp)) {
 						validVisit[i] = true;
-						
+
 						// check id, total id!
 						if (std::get<1>(temp).id == Option::Id_::ID) {
-							const std::string key_1 = clautextUT->GetItemList(ct_itCount).GetName().ToString();
+							const std::string key_1 = clautextUT->GetItemList(jt_itCount).GetName().ToString();
 							const std::string key_2 = "it_name";
 							const std::pair<std::string, std::string> key(key_1, key_2);
 
@@ -617,8 +669,8 @@ namespace Lint {
 								std::cout << "ERROR schema is not valid3" << ENTER;
 								return false;
 							}
-							
-							const std::string key_1 = clautextUT->GetItemList(ct_itCount).GetName().ToString();
+
+							const std::string key_1 = clautextUT->GetItemList(jt_itCount).GetName().ToString();
 							const std::string key_2 = wiz::load_data::LoadData::GetRealDir(schemaUT->GetName().ToString(), schemaUT, &builder);
 							const std::string key_3 = "it_name";
 
@@ -633,7 +685,7 @@ namespace Lint {
 							}
 						}
 						if (std::get<2>(temp).id == Option::Id_::ID) {
-							const std::string key_1 = clautextUT->GetItemList(ct_itCount).Get(0).ToString();
+							const std::string key_1 = clautextUT->GetItemList(jt_itCount).Get(0).ToString();
 							const std::string key_2 = "it_value";
 							const std::pair<std::string, std::string> key(key_1, key_2);
 
@@ -651,7 +703,7 @@ namespace Lint {
 								return false;
 							}
 
-							const std::string key_1 = clautextUT->GetItemList(ct_itCount).Get(0).ToString();
+							const std::string key_1 = clautextUT->GetItemList(jt_itCount).Get(0).ToString();
 							const std::string key_2 = wiz::load_data::LoadData::GetRealDir(schemaUT->GetName().ToString(), schemaUT, &builder);
 							const std::string key_3 = "it_value";
 
@@ -668,68 +720,90 @@ namespace Lint {
 
 						// check justone, (onemore)
 						if (std::get<1>(temp).onemore == Option::OneMore_::JUSTONE) { // justone -> only for name! , not for value!
-							if (chk_justone > 0) {
-								std::cout << "clauText is not valid, justone is set, but not justone. 2" << ENTER;
-								return false;
-							}
-							else {
-								chk_justone++;
-							}
+							//
 						}
 						else if (std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
-							if (ct_itCount < clautextUT->GetItemListSize() - 1
-								&& itCount < schemaUT->GetItemListSize()
-								&& clautextUT->GetItemList(ct_itCount).GetName() == clautextUT->GetItemList(ct_itCount + 1).GetName()
-							) {
-								if (1 != multiple_flag) {
-									--i; itCount--;
-								}
-							}
+							std::cout << "clauText is not valid, in order_on no onemore! 1" << ENTER;
+							return false;
 						}
 						else {
 							//
 						}
 					}
 					else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
-						ct_itCount--;
+						jt_itCount--;
 						validVisit[i] = true;
+
+						if (1 == multiple_flag && itCount < schemaUT->GetItemListSize() - 1 &&
+							schemaUT->GetItemList(itCount + 1).ToString() == "%multiple_off") {
+							multiple_flag = 0;
+							multiple_run = 0;
+							//jt_itCount--;
+						}
+					}
+					else if (1 == multiple_flag && itCount < schemaUT->GetItemListSize() - 1 &&
+						schemaUT->GetItemList(itCount + 1).ToString() == "%multiple_off") {
+						multiple_flag = 0;
+						multiple_run = 0;
+						jt_itCount--;
 					}
 					else {
 						std::cout << "clauText is not valid6" << ENTER;
 						return false;
 					}
 
-
 					if (1 == multiple_flag) {
+						multiple_run = 1;
 						itCount--; i--;
 					}
 				}
-				ct_itCount++;
+				jt_itCount++;
 				itCount++;
 			}
 			else { // usertype
+				// log
+				if (log_on && (order == Option::Order_::OFF)) {
+					std::cout << ENTER << "<usertype> ";
+					std::cout << "[depth] : " << depth << " ";
+					std::cout << "[~th] : " << utCount << " ";
+					std::cout << "[schema] : " << schemaUT->GetUserTypeList(utCount)->GetName().ToString() << " ";
+				}
+
 				// off -> no order? : slow??
 				if (order == Option::Order_::OFF) {
 					bool pass = false;
 					bool use_onemore = false;
 					std::tuple<bool, Option> temp;
-					int chk_justone = 0;
+
+					int check_justone = 0;
 
 					for (long long j = 0; j < clautextUT->GetUserTypeListSize(); ++j) {
+						if (log_on) {
+							std::cout << ENTER << "\t" << "[clauText ~th] : " << j << " "
+								<< "[clautext] : " << clautextUT->GetUserTypeList(j)->GetName().ToString() << ENTER;
+						}
+
 						if (mark2[j] == false && std::get<0>(temp = _Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j), wiz::load_data::LoadData::GetRealDir(clautextUT->GetUserTypeList(j)->GetName().ToString(), clautextUT->GetUserTypeList(j), &builder)))) {
+							if (log_on) {
+								std::cout << " { " << ENTER;
+							}
 							if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(j)->GetIListSize()) {
 								//
 							}
-							else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j), depth + 1)) {
+							else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j), depth + 1, log_on)) {
 								//
 							}
 							else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
-								ct_utCount--;
+								jt_utCount--;
 								validVisit[i] = true;
 							}
 							else {
 								std::cout << "clauText is not valid8" << ENTER;
 								return false;
+							}
+
+							if (log_on) {
+								std::cout << " } " << ENTER;
 							}
 
 							// visit vector? chk?
@@ -758,7 +832,7 @@ namespace Lint {
 									std::cout << "ERROR schema is not valid5" << ENTER;
 									return false;
 								}
-								
+
 								const std::string key_1 = clautextUT->GetUserTypeList(j)->GetName().ToString();
 								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(schemaUT->GetName().ToString(), schemaUT, &builder);
 								const std::string key_3 = "ut_name";
@@ -776,21 +850,17 @@ namespace Lint {
 
 							// check justone, (onemore)
 							if (std::get<1>(temp).onemore == Option::OneMore_::JUSTONE) { // justone -> only for name! , not for value!
-								if (chk_justone > 0) {
+								if (check_justone > 0) {
 									std::cout << "clauText is not valid, justone is set, but not justone. 3" << ENTER;
 									return false;
 								}
 								else {
-									chk_justone++;
+									check_justone++;
 								}
-								break;
-							}
-							else if (std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
-								ct_utCount++;
-								use_onemore = true;
 							}
 							else {
-								break;
+								jt_utCount++;
+								use_onemore = true;
 							}
 						}
 					}
@@ -798,7 +868,7 @@ namespace Lint {
 						Option var_option = OptionFrom(schemaUT->GetUserTypeList(utCount)->GetName().ToString());
 
 						if (var_option.required == Option::Required_::OPTIONAL_) {
-							ct_utCount--;
+							jt_utCount--;
 
 							validVisit[i] = true;
 						}
@@ -809,31 +879,50 @@ namespace Lint {
 					}
 
 					if (use_onemore) {
-						ct_utCount--;
+						jt_utCount--;
 					}
 				}
 				else if (order == Option::Order_::ON) {
 					if (!chk_ct_ut)
 					{
-						break;
+						std::cout << "chk_ct_ut is false" << ENTER;
+
+						if (2 == multiple_run) {
+							utCount++;
+							continue;
+						}
+						else {
+							break;
+						}
 					}
 
+					if (log_on) {
+						std::cout << "[clauText ~th] : " << jt_utCount << " "
+							<< "[clautext] : " << clautextUT->GetUserTypeList(jt_utCount)->GetName().ToString() << ENTER;
+					}
+
+					int check_justone = 0;
+
+
 					std::tuple<bool, Option> temp = _Check(schema_eventUT,
-						schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount),
-						wiz::load_data::LoadData::GetRealDir(clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString(), clautextUT->GetUserTypeList(ct_utCount), &builder)
+						schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(jt_utCount),
+						wiz::load_data::LoadData::GetRealDir(clautextUT->GetUserTypeList(jt_utCount)->GetName().ToString(), clautextUT->GetUserTypeList(jt_utCount), &builder)
 					);
-					int chk_justone = 0;
-						
+
 					if (std::get<0>(temp)) {
-						if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(ct_utCount)->GetIListSize()) {
+						if (log_on) {
+							std::cout << " { " << ENTER;
+						}
+
+						if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(jt_utCount)->GetIListSize()) {
 							//
 						}
-						else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount), depth + 1)) {
+						else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(jt_utCount), depth + 1, log_on)) {
 							validVisit[i] = true;
 
 							// check id, total id!
 							if (std::get<1>(temp).id == Option::Id_::ID) {
-								const std::string key_1 = clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString();
+								const std::string key_1 = clautextUT->GetUserTypeList(jt_utCount)->GetName().ToString();
 								const std::string key_2 = "ut_name";
 								const std::pair<std::string, std::string> key(key_1, key_2);
 
@@ -850,8 +939,8 @@ namespace Lint {
 									std::cout << "ERROR schema is not valid6" << ENTER;
 									return false;
 								}
-								
-								const std::string key_1 = clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString();
+
+								const std::string key_1 = clautextUT->GetUserTypeList(jt_utCount)->GetName().ToString();
 								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(schemaUT->GetName().ToString(), schemaUT, &builder);
 								const std::string key_3 = "ut_name";
 
@@ -868,81 +957,87 @@ namespace Lint {
 
 							// check justone, (onemore)
 							if (std::get<1>(temp).onemore == Option::OneMore_::JUSTONE) { // justone -> only for name! , not for value!
-								if (chk_justone > 0) {
-									std::cout << "clauText is not valid, justone is set, but not justone. 4" << ENTER;
-									return false;
-								}
-								else {
-									chk_justone++;
-								}
+								//
 							}
 							else if (std::get<1>(temp).onemore == Option::OneMore_::ONEMORE) {
-								if (ct_utCount < clautextUT->GetUserTypeListSize() - 1
-									&& utCount < schemaUT->GetUserTypeListSize()
-									&& clautextUT->GetUserTypeList(ct_utCount)->GetName() == clautextUT->GetUserTypeList(ct_utCount + 1)->GetName()
-									) {
-									if (1 != multiple_flag) {
-										--i; utCount--;
-									}
-								}
+								std::cout << "clauText is not valid, in order_on no onemore! 2" << ENTER;
+								return false;
 							}
 							else {
 								//
 							}
 						}
 						else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
-							ct_utCount--;
+							jt_utCount--;
 							validVisit[i] = true;
 						}
 						else {
 							std::cout << "clauText is not valid11" << ENTER;
 							return false;
 						}
+						if (log_on) {
+							std::cout << " } " << ENTER;
+						}
 					}
 					else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
-						ct_utCount--;
+						jt_utCount--;
 						validVisit[i] = true;
+
+						if (1 == multiple_flag &&
+							schemaUT->GetItemList(itCount).ToString() == "%multiple_off") {
+							multiple_flag = 0;
+							multiple_run = 0;
+							//jt_utCount--;
+						}
+					}
+					else if (1 == multiple_flag &&
+						schemaUT->GetItemList(itCount).ToString() == "%multiple_off") {
+						multiple_flag = 0;
+						multiple_run = 0;
+						jt_utCount--;
 					}
 					else {
 						std::cout << "clauText is not valid12" << ENTER;
 						return false;
 					}
-					
+
 					if (1 == multiple_flag) {
+						multiple_run = 2;
 						utCount--; i--;
 					}
 				}
-				
-				ct_utCount++;
+
+				jt_utCount++;
 				utCount++;
 			}
 		}
 
-		if (multiple_flag && clautextUT->GetUserTypeListSize() > 0 && clautextUT->GetItemListSize() == 0) {
-			utCount++;
+		if (multiple_flag && 2 == multiple_run) {
+			//utCount++;
 		}
-		else if (multiple_flag && clautextUT->GetItemListSize() > 0 && clautextUT->GetUserTypeListSize() == 0) {
-			itCount++;
+		else if (multiple_flag && 1 == multiple_run) {
+			//itCount++;
 		}
 		else if (multiple_flag) {
+			std::cout << "multiple_flag is wrong.. " << ENTER;
 			return false;
 		}
 
-		if (ct_itCount != clautextUT->GetItemListSize()) {
+		if (jt_itCount != clautextUT->GetItemListSize()) {
 			std::cout << "clauText is not valid13" << ENTER;
 			return false;
 		}
-		if (ct_utCount != clautextUT->GetUserTypeListSize()) {
-			std::cout << "clauText is not valid14 : " << ct_utCount << ENTER;
+		if (jt_utCount != clautextUT->GetUserTypeListSize()) {
+			std::cout << "clauText is not valid14 : " << jt_utCount << ENTER;
 			return false;
 		}
 
 		if (itCount != schemaUT->GetItemListSize()) {
-			std::cout << "clauText is not valid15 : " << ENTER;
+			std::cout << "clauText is not valid15 : " << itCount << ENTER;
 			return false;
 		}
 		if (utCount != schemaUT->GetUserTypeListSize()) {
-			std::cout << "clauText is not valid16 : " << ENTER;
+			std::cout << "clauText is not valid16 : " << utCount << ENTER;
 			return false;
 		}
 
@@ -1000,7 +1095,7 @@ namespace Lint {
 		{
 			wiz::ClauText clauText;
 			start_name = clauText.excute_module("Main = { $call = { id = __init__ } }", &schema_eventUT, wiz::ExcuteData(), opt, 1); // 0 (remove events) -> 1 (revoke events?)
-		
+
 			if (start_name.empty()) {
 				std::cout << "__init__ must return data`s start? folder?" << ENTER;
 				exit(-1);
@@ -1008,8 +1103,10 @@ namespace Lint {
 		}
 
 		clautextUT = wiz::load_data::UserType::Find(&schema_eventUT, start_name, &builder).second[0];
-		//
-		const bool chk = Check(&schema_eventUT, &schemaUT, clautextUT, 0);
+
+		// for log?
+		bool log_on = false;
+		const bool chk = Check(&schema_eventUT, &schemaUT, clautextUT, 0, log_on);
 
 		//// debug
 		//std::cout << schema_eventUT.ToString() << ENTER
@@ -1038,6 +1135,16 @@ namespace Lint {
 
 		return { valid, std::move(ut) };
 	}
+	inline std::pair<bool, wiz::load_data::UserType> LoadJsonFile(const std::string& fileName)
+	{
+		wiz::load_data::UserType ut;
+
+		bool valid = wiz::load_data::LoadData::LoadDataFromFileFastJson(fileName, ut, 0, 0);
+
+		return { valid, std::move(ut) };
+	}
+
+	// todo SaveJsonFile? for Make Schema?
 	inline bool SaveFile(const std::string& fileName, wiz::load_data::UserType* data)
 	{
 		wiz::load_data::LoadData::SaveWizDB(*data, fileName, "1");
@@ -1049,13 +1156,13 @@ namespace Lint {
 int main(int argc, char* argv[])
 {
 	std::string option;
-	wiz::load_data::UserType schema; // argv[2]?
-	wiz::load_data::UserType clautext; // argv[3]
+	wiz::load_data::UserType schema; // argv[3]?
+	wiz::load_data::UserType clautext; // argv[2]
 	std::string fileName; // to save
 
 	// -v : version? - to do
 	// -V : Validate.
-	// -m : make schema.
+	// -M : Make schema. // removal?
 	if (argc == 3 && 0 == strcmp("-V", argv[1])) {
 		option = "-V";
 
@@ -1077,10 +1184,10 @@ int main(int argc, char* argv[])
 		//	return 2;
 		//}
 	}
-	else if (argc == 4 && 0 == strcmp("-m", argv[1])) {
-		option = "-m";
+	else if (argc == 4 && 0 == strcmp("-M", argv[1])) {
+		option = "-M";
 
-		auto chk_clautext = Lint::LoadFile(argv[2]);
+		auto chk_clautext = Lint::LoadJsonFile(argv[2]);
 
 		if (chk_clautext.first) {
 			clautext = std::move(chk_clautext.second);
@@ -1095,30 +1202,30 @@ int main(int argc, char* argv[])
 	if (option == "-V") {
 		auto chk = Lint::Validate(schema);
 		if (chk) {
-			std::cout << "success" << ENTER;;
+			std::cout << ENTER << "success" << ENTER;
 		}
 		else {
-			std::cout << "fail" << ENTER;;
+			std::cout << ENTER << "fail" << ENTER;
 		}
 	}
-	else if (option == "-m") {
-	//	auto chk = MakeSchema(clautext);
-	//	if (chk.first) {
-	//		schema = chk.second;
+	else if (option == "-M") {
+		//	auto chk = MakeSchema(clautext);
+		//	if (chk.first) {
+		//		schema = chk.second;
 
-	//		if (SaveFile(fileName, schema)) {
+		//		if (SaveFile(fileName, schema)) {
 
-	//		}
-	//		else {
-	//			std::cout << "save fail" << ENTER;
-	//			return 4;
-	//		}
-			
-	//		std::cout << "success" << ENTER;
-	//	}
-	//	else {
-	//		std::cout << "fail" << ENTER;
-	//	}
+		//		}
+		//		else {
+		//			std::cout << "save fail" << ENTER;
+		//			return 4;
+		//		}
+
+		//		std::cout << "success" << ENTER;
+		//	}
+		//	else {
+		//		std::cout << "fail" << ENTER;
+		//	}
 	}
 	else {
 		std::cout << "it is not valid option" << ENTER;
