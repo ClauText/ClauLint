@@ -413,6 +413,9 @@ namespace Lint {
 	bool Check(wiz::load_data::UserType* schema_eventUT, wiz::load_data::UserType* schemaUT,
 		const wiz::load_data::UserType* clautextUT, int depth, bool& log_on)
 	{
+		bool use_it_order_on = false;
+		bool use_ut_order_on = false;
+
 		Option::Order_ order = Option::Order_::OFF;
 		long long jt_itCount = 0; // for clautextUT?
 		long long jt_utCount = 0; // for clautextUT?
@@ -431,24 +434,49 @@ namespace Lint {
 
 		int multiple_run = 0; // 1 - it(itemtype) run, 2 - ut(usertype) run.
 
+		long long count_jt_it = 0;
+		long long count_jt_ut = 0;
+
 		for (long long i = 0; i < schemaUT->GetIListSize(); ++i)
 		{
-			if (depth == 0) { // chk - clauText`s depth >= 1 ( { ~~ } )
+			if (depth == 0) { // chk - clau`s depth >= 1 ( { ~~ } )
 				check_total_id.clear();
 			}
-
 			const bool chk_ct_it = jt_itCount < clautextUT->GetItemListSize();
 			const bool chk_ct_ut = jt_utCount < clautextUT->GetUserTypeListSize();
+
+			bool check_pass = false;
 
 			if (schemaUT->IsItemList(i)) {
 				if (schemaUT->GetItemListSize() > 0 && schemaUT->GetItemList(itCount).ToString() == "%order_on") {
 					order = Option::Order_::ON;
 					validVisit[i] = true;
 					itCount++;
+
+					if (use_it_order_on) {
+						jt_itCount += count_jt_it;
+						count_jt_it = 0;
+					}
+					if (use_ut_order_on) {
+						jt_utCount += count_jt_ut;
+						count_jt_ut = 0;
+					}
+
+					use_it_order_on = false;
+					use_ut_order_on = false;
+
 					continue;
 				}
 				else if (schemaUT->GetItemList(itCount).ToString() == "%order_off") {
 					order = Option::Order_::OFF;
+
+					count_jt_it = 0;
+					count_jt_ut = 0;
+					
+
+					use_it_order_on = false;
+					use_ut_order_on = false;
+
 					validVisit[i] = true;
 					itCount++;
 					continue;
@@ -475,7 +503,7 @@ namespace Lint {
 					continue;
 				}
 				else if (schemaUT->GetItemList(itCount).ToString() == "%log_on") {
-					log_on = true;
+					log_on = true; 
 					validVisit[i] = true;
 					itCount++;
 					continue;
@@ -486,15 +514,17 @@ namespace Lint {
 					itCount++;
 					continue;
 				}
-
+				
 
 				// log
-				if (log_on && (order == Option::Order_::OFF)) {
+				if (log_on) {
 					std::cout << ENTER << "<itemtype> ";
 					std::cout << "[depth] : " << depth << " ";
 					std::cout << "[~th] : " << itCount << " ";
 					std::cout << "[schema] : " << schemaUT->GetItemList(itCount).ToString() << " ";
 				}
+
+				
 
 				// off -> no order? : slow??
 				if (order == Option::Order_::OFF) {
@@ -503,16 +533,16 @@ namespace Lint {
 					std::tuple<bool, Option, Option> temp;
 
 					int check_justone = 0;
-
+					
 					// schemaUT?
 					for (long long j = 0; j < clautextUT->GetItemListSize(); ++j) {
 						if (log_on) {
-							std::cout << ENTER << "\t" << "[clauText ~th] : " << j << " "
+							std::cout << ENTER << "\t" << "[clau ~th] : " << j << " "
 								<< "[clautext] : " << clautextUT->GetItemList(j).ToString() << ENTER;
 						}
 
 						temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(j), wiz::load_data::LoadData::GetRealDir(clautextUT->GetItemList(j).GetName().ToString(), clautextUT, &builder));
-
+						
 						if (mark[j] == false &&
 							std::get<0>(temp)
 							) {
@@ -598,10 +628,13 @@ namespace Lint {
 								}
 								else {
 									check_justone++;
+									count_jt_it++;
+									use_it_order_on = true;
 								}
 							}
 							else {
-								jt_itCount++;
+								use_it_order_on = true;
+								count_jt_it++; //jt_itCount++;
 								use_onemore = true;
 							}
 						}
@@ -611,7 +644,6 @@ namespace Lint {
 						Option var_option = OptionFrom(schemaUT->GetItemList(itCount).GetName().ToString());
 
 						if (var_option.required == Option::Required_::OPTIONAL_) { // optional -> only for name
-							jt_itCount--;
 							validVisit[i] = true;
 						}
 						else {
@@ -619,16 +651,12 @@ namespace Lint {
 							return false;
 						}
 					}
-
-					if (use_onemore) {
-						jt_itCount--;
-					}
 				}
 				else if (order == Option::Order_::ON) {
 					if (!chk_ct_it) {
 						std::cout << "chk_ct_it is false" << ENTER;
-
-						if (1 == multiple_run) {
+						
+						if (1 == multiple_run) {	
 							itCount++;
 							continue;
 						}
@@ -638,16 +666,22 @@ namespace Lint {
 					}
 
 					if (log_on) {
-						std::cout << "[clauText ~th] : " << jt_itCount << " "
+						std::cout << "[clau ~th] : " << jt_itCount << " "
 							<< "[clautext] : " << clautextUT->GetItemList(jt_itCount).ToString() << ENTER;
 					}
+					
+					check_pass = true;
 
 					int check_justone = 0;
 
 					std::tuple<bool, Option, Option> temp;
 					temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(jt_itCount), wiz::load_data::LoadData::GetRealDir(clautextUT->GetItemList(jt_itCount).GetName().ToString(), clautextUT, &builder));
 
-					if (std::get<0>(temp)) {
+					if (mark[jt_itCount]) {
+						std::cout << "mark " << ENTER;
+						return false;
+					}
+					else if (std::get<0>(temp)) {
 						validVisit[i] = true;
 
 						// check id, total id!
@@ -684,6 +718,7 @@ namespace Lint {
 								return false;
 							}
 						}
+
 						if (std::get<2>(temp).id == Option::Id_::ID) {
 							const std::string key_1 = clautextUT->GetItemList(jt_itCount).Get(0).ToString();
 							const std::string key_2 = "it_value";
@@ -731,21 +766,20 @@ namespace Lint {
 						}
 					}
 					else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
-						jt_itCount--;
+						check_pass = false;
 						validVisit[i] = true;
 
 						if (1 == multiple_flag && itCount < schemaUT->GetItemListSize() - 1 &&
 							schemaUT->GetItemList(itCount + 1).ToString() == "%multiple_off") {
 							multiple_flag = 0;
 							multiple_run = 0;
-							//jt_itCount--;
 						}
 					}
-					else if (1 == multiple_flag && itCount < schemaUT->GetItemListSize() - 1 &&
-						schemaUT->GetItemList(itCount + 1).ToString() == "%multiple_off") {
+					else if (1 == multiple_flag && itCount < schemaUT->GetItemListSize() -1 &&
+						schemaUT->GetItemList(itCount+1).ToString() == "%multiple_off") {
 						multiple_flag = 0;
 						multiple_run = 0;
-						jt_itCount--;
+						check_pass = false;
 					}
 					else {
 						std::cout << "clauText is not valid6" << ENTER;
@@ -753,16 +787,19 @@ namespace Lint {
 					}
 
 					if (1 == multiple_flag) {
-						multiple_run = 1;
+						multiple_run = 1; 
 						itCount--; i--;
 					}
 				}
-				jt_itCount++;
+				
+				if (Option::Order_::ON == order && check_pass) {
+					jt_itCount++;
+				}
 				itCount++;
 			}
 			else { // usertype
 				// log
-				if (log_on && (order == Option::Order_::OFF)) {
+				if (log_on) {
 					std::cout << ENTER << "<usertype> ";
 					std::cout << "[depth] : " << depth << " ";
 					std::cout << "[~th] : " << utCount << " ";
@@ -779,7 +816,7 @@ namespace Lint {
 
 					for (long long j = 0; j < clautextUT->GetUserTypeListSize(); ++j) {
 						if (log_on) {
-							std::cout << ENTER << "\t" << "[clauText ~th] : " << j << " "
+							std::cout << ENTER << "\t" << "[clau ~th] : " << j << " "
 								<< "[clautext] : " << clautextUT->GetUserTypeList(j)->GetName().ToString() << ENTER;
 						}
 
@@ -794,14 +831,14 @@ namespace Lint {
 								//
 							}
 							else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
-								jt_utCount--;
+							//	jt_utCount--;
 								validVisit[i] = true;
 							}
 							else {
 								std::cout << "clauText is not valid8" << ENTER;
 								return false;
 							}
-
+							
 							if (log_on) {
 								std::cout << " } " << ENTER;
 							}
@@ -856,10 +893,13 @@ namespace Lint {
 								}
 								else {
 									check_justone++;
+									use_ut_order_on = true;
+									count_jt_ut++; //jt_utCount++;
 								}
 							}
 							else {
-								jt_utCount++;
+								use_ut_order_on = true;
+								count_jt_ut++; //jt_utCount++;
 								use_onemore = true;
 							}
 						}
@@ -868,7 +908,7 @@ namespace Lint {
 						Option var_option = OptionFrom(schemaUT->GetUserTypeList(utCount)->GetName().ToString());
 
 						if (var_option.required == Option::Required_::OPTIONAL_) {
-							jt_utCount--;
+							//jt_utCount--;
 
 							validVisit[i] = true;
 						}
@@ -877,30 +917,26 @@ namespace Lint {
 							return false;
 						}
 					}
-
-					if (use_onemore) {
-						jt_utCount--;
-					}
 				}
 				else if (order == Option::Order_::ON) {
 					if (!chk_ct_ut)
 					{
-						std::cout << "chk_ct_ut is false" << ENTER;
+						std::cout << "chk_ct_ut is false" << ENTER;	
 
 						if (2 == multiple_run) {
 							utCount++;
 							continue;
 						}
 						else {
-							break;
-						}
+							break;						}
 					}
-
+					
 					if (log_on) {
-						std::cout << "[clauText ~th] : " << jt_utCount << " "
+						std::cout << "[clau ~th] : " << jt_utCount << " "
 							<< "[clautext] : " << clautextUT->GetUserTypeList(jt_utCount)->GetName().ToString() << ENTER;
 					}
 
+					check_pass = true;
 					int check_justone = 0;
 
 
@@ -909,11 +945,16 @@ namespace Lint {
 						wiz::load_data::LoadData::GetRealDir(clautextUT->GetUserTypeList(jt_utCount)->GetName().ToString(), clautextUT->GetUserTypeList(jt_utCount), &builder)
 					);
 
-					if (std::get<0>(temp)) {
+					if (mark2[jt_utCount]) {
+						std::cout << "mark2" << ENTER;
+						return false;
+					}
+					else if (std::get<0>(temp)) {
 						if (log_on) {
 							std::cout << " { " << ENTER;
 						}
 
+						
 						if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(jt_utCount)->GetIListSize()) {
 							//
 						}
@@ -968,7 +1009,7 @@ namespace Lint {
 							}
 						}
 						else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
-							jt_utCount--;
+							check_pass = false;
 							validVisit[i] = true;
 						}
 						else {
@@ -980,21 +1021,21 @@ namespace Lint {
 						}
 					}
 					else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
-						jt_utCount--;
+						check_pass = false;
 						validVisit[i] = true;
-
-						if (1 == multiple_flag &&
+						
+						if (1 == multiple_flag && 
 							schemaUT->GetItemList(itCount).ToString() == "%multiple_off") {
 							multiple_flag = 0;
-							multiple_run = 0;
+							multiple_run = 0; 
 							//jt_utCount--;
 						}
 					}
-					else if (1 == multiple_flag &&
+					else if (1 == multiple_flag && 
 						schemaUT->GetItemList(itCount).ToString() == "%multiple_off") {
 						multiple_flag = 0;
 						multiple_run = 0;
-						jt_utCount--;
+						check_pass = false;
 					}
 					else {
 						std::cout << "clauText is not valid12" << ENTER;
@@ -1006,11 +1047,21 @@ namespace Lint {
 						utCount--; i--;
 					}
 				}
-
-				jt_utCount++;
+				if (Option::Order_::ON == order && check_pass) {
+					jt_utCount++;
+				}
 				utCount++;
 			}
 		}
+
+		
+		if (use_it_order_on) { // order_off?
+			jt_itCount += count_jt_it;
+		}
+		if (use_ut_order_on) {
+			jt_utCount += count_jt_ut;
+		}
+		
 
 		if (multiple_flag && 2 == multiple_run) {
 			//utCount++;
@@ -1024,7 +1075,7 @@ namespace Lint {
 		}
 
 		if (jt_itCount != clautextUT->GetItemListSize()) {
-			std::cout << "clauText is not valid13" << ENTER;
+			std::cout << "clauText is not valid13 : " << jt_itCount << " " << clautextUT->GetItemListSize() << ENTER;
 			return false;
 		}
 		if (jt_utCount != clautextUT->GetUserTypeListSize()) {
@@ -1103,10 +1154,16 @@ namespace Lint {
 		}
 
 		clautextUT = wiz::load_data::UserType::Find(&schema_eventUT, start_name, &builder).second[0];
-
+		
 		// for log?
 		bool log_on = false;
 		const bool chk = Check(&schema_eventUT, &schemaUT, clautextUT, 0, log_on);
+
+		{
+			wiz::ClauText clauText;
+			
+			clauText.excute_module("Main = { $call = { id = __end__ } }", &schema_eventUT, wiz::ExcuteData(), opt, 1); // 0 (remove events) -> 1 (revoke events?)
+		}
 
 		//// debug
 		//std::cout << schema_eventUT.ToString() << ENTER
@@ -1202,7 +1259,7 @@ int main(int argc, char* argv[])
 	if (option == "-V") {
 		auto chk = Lint::Validate(schema);
 		if (chk) {
-			std::cout << ENTER << "success" << ENTER;
+			std::cout << ENTER <<  "success" << ENTER;
 		}
 		else {
 			std::cout << ENTER << "fail" << ENTER;
