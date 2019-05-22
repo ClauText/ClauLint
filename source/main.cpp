@@ -54,27 +54,27 @@ namespace Lint {
 			//
 		}
 	public:
-		Option & Type(Type_ type) {
+		Option& Type(Type_ type) {
 			this->type.push_back(type);
 			return *this;
 		}
-		Option & Id(Id_ id) {
+		Option& Id(Id_ id) {
 			this->id = id;
 			return *this;
 		}
-		Option & OneMore(OneMore_ onemore) {
+		Option& OneMore(OneMore_ onemore) {
 			this->onemore = onemore;
 			return *this;
 		}
-		Option & EmptyUT(EmptyUT_ empty_ut) {
+		Option& EmptyUT(EmptyUT_ empty_ut) {
 			this->empty_ut = empty_ut;
 			return *this;
 		}
-		Option & Required(Required_ required) {
+		Option& Required(Required_ required) {
 			this->required = required;
 			return *this;
 		}
-		Option & Event(const std::string& event_id) {
+		Option& Event(const std::string& event_id) {
 			this->event_ids += " ";
 			this->event_ids += event_id;
 			return *this;
@@ -177,7 +177,7 @@ namespace Lint {
 	}
 
 	// chk valid in here!
-	inline bool OptionDoA(const Option& option, const std::string& str)
+	inline bool OptionDoA(const Option & option, const std::string & str)
 	{
 		if (option.prefix.empty() == false &&
 			option.prefix == str) {
@@ -260,8 +260,8 @@ namespace Lint {
 		return count > 0;
 	}
 
-	std::tuple<bool, Option, Option> _Check(wiz::load_data::UserType* schema_eventUT,
-		const wiz::load_data::ItemType<WIZ_STRING_TYPE>& x, const wiz::load_data::ItemType<WIZ_STRING_TYPE>& y, const std::string& real_dir) //, Order?
+	std::tuple<bool, Option, Option> _Check(wiz::load_data::UserType * schema_eventUT,
+		const wiz::load_data::ItemType<WIZ_STRING_TYPE> & x, const wiz::load_data::ItemType<WIZ_STRING_TYPE> & y, const std::string & real_dir) //, Order?
 	{
 		const Option var_option = OptionFrom(x.GetName().ToString()); // name, value check - not start with % ??
 		const Option val_option = OptionFrom(x.Get(0).ToString());
@@ -346,8 +346,8 @@ namespace Lint {
 		return { true, var_option, val_option };
 	}
 
-	std::tuple<bool, Option> _Check(wiz::load_data::UserType* schema_eventUT,
-		const wiz::load_data::UserType* x, const wiz::load_data::UserType* y, const std::string& real_dir // Order?
+	std::tuple<bool, Option> _Check(wiz::load_data::UserType * schema_eventUT,
+		const wiz::load_data::UserType * x, const wiz::load_data::UserType * y, const std::string & real_dir // Order?
 	)
 	{
 		Option var_option = OptionFrom(x->GetName().ToString()); // name, value check - not start with % ??
@@ -410,17 +410,20 @@ namespace Lint {
 	// varaible!
 	std::set<std::tuple<std::string, std::string, std::string>> check_total_id;
 
-	bool Check(wiz::load_data::UserType* schema_eventUT, wiz::load_data::UserType* schemaUT,
-		const wiz::load_data::UserType* clautextUT, int depth, bool& log_on)
+	bool Check(wiz::load_data::UserType * schema_eventUT, wiz::load_data::UserType * schemaUT,
+		const wiz::load_data::UserType * clautextUT, int depth, bool& log_on)
 	{
+
 		bool use_it_order_on = false;
 		bool use_ut_order_on = false;
 
 		Option::Order_ order = Option::Order_::OFF;
-		long long jt_itCount = 0; // for clautextUT?
-		long long jt_utCount = 0; // for clautextUT?
-		long long itCount = 0;
-		long long utCount = 0;
+		long long ct_itCount = 0; // for clautextUT?
+		long long ct_utCount = 0; // for clautextUT?
+		long long itCount = 0; // for schema
+		long long utCount = 0; // for schema
+		 
+		long long virtual_utCount = 0; // for schema
 
 		long multiple_flag = 0; // 0 : no multiple, 1 : multiple
 
@@ -434,16 +437,17 @@ namespace Lint {
 
 		int multiple_run = 0; // 1 - it(itemtype) run, 2 - ut(usertype) run.
 
-		long long count_jt_it = 0;
-		long long count_jt_ut = 0;
+		long long count_ct_it = 0;
+		long long count_ct_ut = 0;
+
 
 		for (long long i = 0; i < schemaUT->GetIListSize(); ++i)
 		{
 			if (depth == 0) { // chk - clau`s depth >= 1 ( { ~~ } )
 				check_total_id.clear();
 			}
-			const bool chk_ct_it = jt_itCount < clautextUT->GetItemListSize();
-			const bool chk_ct_ut = jt_utCount < clautextUT->GetUserTypeListSize();
+			const bool chk_ct_it = ct_itCount <= clautextUT->GetItemListSize();
+			const bool chk_ct_ut = ct_utCount <= clautextUT->GetUserTypeListSize();
 
 			bool check_pass = false;
 
@@ -454,12 +458,12 @@ namespace Lint {
 					itCount++;
 
 					if (use_it_order_on) {
-						jt_itCount += count_jt_it;
-						count_jt_it = 0;
+						ct_itCount += count_ct_it;
+						count_ct_it = 0;
 					}
 					if (use_ut_order_on) {
-						jt_utCount += count_jt_ut;
-						count_jt_ut = 0;
+						ct_utCount += count_ct_ut;
+						count_ct_ut = 0;
 					}
 
 					use_it_order_on = false;
@@ -470,9 +474,9 @@ namespace Lint {
 				else if (schemaUT->GetItemList(itCount).ToString() == "%order_off") {
 					order = Option::Order_::OFF;
 
-					count_jt_it = 0;
-					count_jt_ut = 0;
-					
+					count_ct_it = 0;
+					count_ct_ut = 0;
+
 
 					use_it_order_on = false;
 					use_ut_order_on = false;
@@ -503,7 +507,7 @@ namespace Lint {
 					continue;
 				}
 				else if (schemaUT->GetItemList(itCount).ToString() == "%log_on") {
-					log_on = true; 
+					log_on = true;
 					validVisit[i] = true;
 					itCount++;
 					continue;
@@ -514,7 +518,7 @@ namespace Lint {
 					itCount++;
 					continue;
 				}
-				
+
 
 				// log
 				if (log_on) {
@@ -524,7 +528,7 @@ namespace Lint {
 					std::cout << "[schema] : " << schemaUT->GetItemList(itCount).ToString() << " ";
 				}
 
-				
+
 
 				// off -> no order? : slow??
 				if (order == Option::Order_::OFF) {
@@ -533,7 +537,7 @@ namespace Lint {
 					std::tuple<bool, Option, Option> temp;
 
 					int check_justone = 0;
-					
+
 					// schemaUT?
 					for (long long j = 0; j < clautextUT->GetItemListSize(); ++j) {
 						if (log_on) {
@@ -542,7 +546,7 @@ namespace Lint {
 						}
 
 						temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(j), wiz::load_data::LoadData::GetRealDir(clautextUT->GetItemList(j).GetName().ToString(), clautextUT, &builder));
-						
+
 						if (mark[j] == false &&
 							std::get<0>(temp)
 							) {
@@ -628,13 +632,13 @@ namespace Lint {
 								}
 								else {
 									check_justone++;
-									count_jt_it++;
+									count_ct_it++;
 									use_it_order_on = true;
 								}
 							}
 							else {
 								use_it_order_on = true;
-								count_jt_it++; //jt_itCount++;
+								count_ct_it++; //ct_itCount++;
 								use_onemore = true;
 							}
 						}
@@ -655,8 +659,8 @@ namespace Lint {
 				else if (order == Option::Order_::ON) {
 					if (!chk_ct_it) {
 						std::cout << "chk_ct_it is false" << ENTER;
-						
-						if (1 == multiple_run) {	
+
+						if (1 == multiple_run) {
 							itCount++;
 							continue;
 						}
@@ -666,18 +670,18 @@ namespace Lint {
 					}
 
 					if (log_on) {
-						std::cout << "[clau ~th] : " << jt_itCount << " "
-							<< "[clautext] : " << clautextUT->GetItemList(jt_itCount).ToString() << ENTER;
+						std::cout << "[clau ~th] : " << ct_itCount << " "
+							<< "[clautext] : " << clautextUT->GetItemList(ct_itCount).ToString() << ENTER;
 					}
-					
+
 					check_pass = true;
 
 					int check_justone = 0;
 
 					std::tuple<bool, Option, Option> temp;
-					temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(jt_itCount), wiz::load_data::LoadData::GetRealDir(clautextUT->GetItemList(jt_itCount).GetName().ToString(), clautextUT, &builder));
+					temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(ct_itCount), wiz::load_data::LoadData::GetRealDir(clautextUT->GetItemList(ct_itCount).GetName().ToString(), clautextUT, &builder));
 
-					if (mark[jt_itCount]) {
+					if (mark[ct_itCount]) {
 						std::cout << "mark " << ENTER;
 						return false;
 					}
@@ -686,7 +690,7 @@ namespace Lint {
 
 						// check id, total id!
 						if (std::get<1>(temp).id == Option::Id_::ID) {
-							const std::string key_1 = clautextUT->GetItemList(jt_itCount).GetName().ToString();
+							const std::string key_1 = clautextUT->GetItemList(ct_itCount).GetName().ToString();
 							const std::string key_2 = "it_name";
 							const std::pair<std::string, std::string> key(key_1, key_2);
 
@@ -704,7 +708,7 @@ namespace Lint {
 								return false;
 							}
 
-							const std::string key_1 = clautextUT->GetItemList(jt_itCount).GetName().ToString();
+							const std::string key_1 = clautextUT->GetItemList(ct_itCount).GetName().ToString();
 							const std::string key_2 = wiz::load_data::LoadData::GetRealDir(schemaUT->GetName().ToString(), schemaUT, &builder);
 							const std::string key_3 = "it_name";
 
@@ -720,7 +724,7 @@ namespace Lint {
 						}
 
 						if (std::get<2>(temp).id == Option::Id_::ID) {
-							const std::string key_1 = clautextUT->GetItemList(jt_itCount).Get(0).ToString();
+							const std::string key_1 = clautextUT->GetItemList(ct_itCount).Get(0).ToString();
 							const std::string key_2 = "it_value";
 							const std::pair<std::string, std::string> key(key_1, key_2);
 
@@ -738,7 +742,7 @@ namespace Lint {
 								return false;
 							}
 
-							const std::string key_1 = clautextUT->GetItemList(jt_itCount).Get(0).ToString();
+							const std::string key_1 = clautextUT->GetItemList(ct_itCount).Get(0).ToString();
 							const std::string key_2 = wiz::load_data::LoadData::GetRealDir(schemaUT->GetName().ToString(), schemaUT, &builder);
 							const std::string key_3 = "it_value";
 
@@ -775,8 +779,8 @@ namespace Lint {
 							multiple_run = 0;
 						}
 					}
-					else if (1 == multiple_flag && itCount < schemaUT->GetItemListSize() -1 &&
-						schemaUT->GetItemList(itCount+1).ToString() == "%multiple_off") {
+					else if (1 == multiple_flag && itCount < schemaUT->GetItemListSize() - 1 &&
+						schemaUT->GetItemList(itCount + 1).ToString() == "%multiple_off") {
 						multiple_flag = 0;
 						multiple_run = 0;
 						check_pass = false;
@@ -787,13 +791,13 @@ namespace Lint {
 					}
 
 					if (1 == multiple_flag) {
-						multiple_run = 1; 
+						multiple_run = 1;
 						itCount--; i--;
 					}
 				}
-				
+
 				if (Option::Order_::ON == order && check_pass) {
-					jt_itCount++;
+					ct_itCount++;
 				}
 				itCount++;
 			}
@@ -827,18 +831,21 @@ namespace Lint {
 							if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(j)->GetIListSize()) {
 								//
 							}
+							else if (clautextUT->GetUserTypeList(j)->empty()) {
+								//
+							}
 							else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j), depth + 1, log_on)) {
 								//
 							}
 							else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
-							//	jt_utCount--;
+								ct_utCount--;
 								validVisit[i] = true;
 							}
 							else {
 								std::cout << "clauText is not valid8" << ENTER;
 								return false;
 							}
-							
+
 							if (log_on) {
 								std::cout << " } " << ENTER;
 							}
@@ -894,12 +901,12 @@ namespace Lint {
 								else {
 									check_justone++;
 									use_ut_order_on = true;
-									count_jt_ut++; //jt_utCount++;
+									count_ct_ut++; //ct_utCount++;
 								}
 							}
 							else {
 								use_ut_order_on = true;
-								count_jt_ut++; //jt_utCount++;
+								count_ct_ut++; //ct_utCount++;
 								use_onemore = true;
 							}
 						}
@@ -908,7 +915,7 @@ namespace Lint {
 						Option var_option = OptionFrom(schemaUT->GetUserTypeList(utCount)->GetName().ToString());
 
 						if (var_option.required == Option::Required_::OPTIONAL_) {
-							//jt_utCount--;
+							//ct_utCount--;
 
 							validVisit[i] = true;
 						}
@@ -921,19 +928,20 @@ namespace Lint {
 				else if (order == Option::Order_::ON) {
 					if (!chk_ct_ut)
 					{
-						std::cout << "chk_ct_ut is false" << ENTER;	
+						std::cout << "chk_ct_ut is false" << ENTER;
 
 						if (2 == multiple_run) {
 							utCount++;
 							continue;
 						}
 						else {
-							break;						}
+							break;
+						}
 					}
-					
-					if (log_on) {
-						std::cout << "[clau ~th] : " << jt_utCount << " "
-							<< "[clautext] : " << clautextUT->GetUserTypeList(jt_utCount)->GetName().ToString() << ENTER;
+
+					if (log_on && ct_utCount < clautextUT->GetUserTypeListSize()) {
+						std::cout << "[clau ~th] : " << ct_utCount << " "
+							<< "[clautext] : " << clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString() << ENTER;
 					}
 
 					check_pass = true;
@@ -941,11 +949,11 @@ namespace Lint {
 
 
 					std::tuple<bool, Option> temp = _Check(schema_eventUT,
-						schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(jt_utCount),
-						wiz::load_data::LoadData::GetRealDir(clautextUT->GetUserTypeList(jt_utCount)->GetName().ToString(), clautextUT->GetUserTypeList(jt_utCount), &builder)
+						schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount),
+						wiz::load_data::LoadData::GetRealDir(clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString(), clautextUT->GetUserTypeList(ct_utCount), &builder)
 					);
 
-					if (mark2[jt_utCount]) {
+					if (mark2[ct_utCount]) {
 						std::cout << "mark2" << ENTER;
 						return false;
 					}
@@ -955,15 +963,18 @@ namespace Lint {
 						}
 
 						
-						if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(jt_utCount)->GetIListSize()) {
+						if (std::get<1>(temp).empty_ut == Option::EmptyUT_::ON && 0 == clautextUT->GetUserTypeList(ct_utCount)->GetIListSize()) {
+						//	std::cout << "empty" << "\n";//
+						}
+						else if (clautextUT->GetUserTypeList(ct_utCount)->empty()) {
 							//
 						}
-						else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(jt_utCount), depth + 1, log_on)) {
+						else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount), depth + 1, log_on)) {
 							validVisit[i] = true;
 
 							// check id, total id!
 							if (std::get<1>(temp).id == Option::Id_::ID) {
-								const std::string key_1 = clautextUT->GetUserTypeList(jt_utCount)->GetName().ToString();
+								const std::string key_1 = clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString();
 								const std::string key_2 = "ut_name";
 								const std::pair<std::string, std::string> key(key_1, key_2);
 
@@ -981,7 +992,7 @@ namespace Lint {
 									return false;
 								}
 
-								const std::string key_1 = clautextUT->GetUserTypeList(jt_utCount)->GetName().ToString();
+								const std::string key_1 = clautextUT->GetUserTypeList(ct_utCount)->GetName().ToString();
 								const std::string key_2 = wiz::load_data::LoadData::GetRealDir(schemaUT->GetName().ToString(), schemaUT, &builder);
 								const std::string key_3 = "ut_name";
 
@@ -1005,12 +1016,13 @@ namespace Lint {
 								return false;
 							}
 							else {
-								//
+								//std::cout << "here" << "\n";
 							}
 						}
 						else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
 							check_pass = false;
 							validVisit[i] = true;
+							virtual_utCount++;
 						}
 						else {
 							std::cout << "clauText is not valid11" << ENTER;
@@ -1023,15 +1035,16 @@ namespace Lint {
 					else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
 						check_pass = false;
 						validVisit[i] = true;
-						
-						if (1 == multiple_flag && 
+						virtual_utCount++;
+
+						if (1 == multiple_flag &&
 							schemaUT->GetItemList(itCount).ToString() == "%multiple_off") {
 							multiple_flag = 0;
-							multiple_run = 0; 
-							//jt_utCount--;
+							multiple_run = 0;
+							//ct_utCount--;
 						}
 					}
-					else if (1 == multiple_flag && 
+					else if (1 == multiple_flag &&
 						schemaUT->GetItemList(itCount).ToString() == "%multiple_off") {
 						multiple_flag = 0;
 						multiple_run = 0;
@@ -1048,20 +1061,20 @@ namespace Lint {
 					}
 				}
 				if (Option::Order_::ON == order && check_pass) {
-					jt_utCount++;
+					ct_utCount++;
 				}
 				utCount++;
 			}
 		}
 
-		
+
 		if (use_it_order_on) { // order_off?
-			jt_itCount += count_jt_it;
+			ct_itCount += count_ct_it;
 		}
 		if (use_ut_order_on) {
-			jt_utCount += count_jt_ut;
+			ct_utCount += count_ct_ut;
 		}
-		
+
 
 		if (multiple_flag && 2 == multiple_run) {
 			//utCount++;
@@ -1074,12 +1087,12 @@ namespace Lint {
 			return false;
 		}
 
-		if (jt_itCount != clautextUT->GetItemListSize()) {
-			std::cout << "clauText is not valid13 : " << jt_itCount << " " << clautextUT->GetItemListSize() << ENTER;
+		if (ct_itCount != clautextUT->GetItemListSize()) {
+			std::cout << "clauText is not valid13 : " << ct_itCount << " " << clautextUT->GetItemListSize() << ENTER;
 			return false;
 		}
-		if (jt_utCount != clautextUT->GetUserTypeListSize()) {
-			std::cout << "clauText is not valid14 : " << jt_utCount << ENTER;
+		if (ct_utCount != clautextUT->GetUserTypeListSize()) {
+			std::cout << "clauText is not valid14 : " << ct_utCount << ENTER;
 			return false;
 		}
 
@@ -1087,8 +1100,8 @@ namespace Lint {
 			std::cout << "clauText is not valid15 : " << itCount << ENTER;
 			return false;
 		}
-		if (utCount != schemaUT->GetUserTypeListSize()) {
-			std::cout << "clauText is not valid16 : " << utCount << ENTER;
+		if (utCount + virtual_utCount != schemaUT->GetUserTypeListSize()) {
+			std::cout << "clauText is not valid16 : " << utCount << " " <<  virtual_utCount << " " << schemaUT->GetUserTypeListSize() << ENTER;
 			return false;
 		}
 
@@ -1102,7 +1115,7 @@ namespace Lint {
 		return true;
 	}
 
-	inline bool _Validate(const wiz::load_data::UserType& schemaFileUT)
+	inline bool _Validate(const wiz::load_data::UserType & schemaFileUT)
 	{
 		// 1. $로 시작하는 것들을 따로 분리해서 별도의 UserType에 저장한다.
 			// 1-1. $Event -> 따로 뽑아낸 다음 Event로 rename?
@@ -1154,14 +1167,14 @@ namespace Lint {
 		}
 
 		clautextUT = wiz::load_data::UserType::Find(&schema_eventUT, start_name, &builder).second[0];
-		
+
 		// for log?
 		bool log_on = false;
 		const bool chk = Check(&schema_eventUT, &schemaUT, clautextUT, 0, log_on);
 
 		{
 			wiz::ClauText clauText;
-			
+
 			clauText.excute_module("Main = { $call = { id = __end__ } }", &schema_eventUT, wiz::ExcuteData(), opt, 1); // 0 (remove events) -> 1 (revoke events?)
 		}
 
@@ -1171,7 +1184,7 @@ namespace Lint {
 		return chk;
 	}
 
-	inline bool Validate(const wiz::load_data::UserType& schema)
+	inline bool Validate(const wiz::load_data::UserType & schema)
 	{
 		return _Validate(schema);
 	}
@@ -1184,15 +1197,15 @@ namespace Lint {
 	//}
 
 
-	inline std::pair<bool, wiz::load_data::UserType> LoadFile(const std::string& fileName)
+	inline std::pair<bool, wiz::load_data::UserType> LoadFile(const std::string & fileName)
 	{
 		wiz::load_data::UserType ut;
 
-		bool valid = wiz::load_data::LoadData::LoadDataFromFile3(fileName, ut, 0, 0);
+		bool valid = wiz::load_data::LoadData::LoadDataFromFile5_2(fileName, ut, 0, 0);
 
 		return { valid, std::move(ut) };
 	}
-	inline std::pair<bool, wiz::load_data::UserType> LoadJsonFile(const std::string& fileName)
+	inline std::pair<bool, wiz::load_data::UserType> LoadJsonFile(const std::string & fileName)
 	{
 		wiz::load_data::UserType ut;
 
@@ -1202,7 +1215,7 @@ namespace Lint {
 	}
 
 	// todo SaveJsonFile? for Make Schema?
-	inline bool SaveFile(const std::string& fileName, wiz::load_data::UserType* data)
+	inline bool SaveFile(const std::string & fileName, wiz::load_data::UserType * data)
 	{
 		wiz::load_data::LoadData::SaveWizDB(*data, fileName, "1");
 		return true;
@@ -1259,7 +1272,7 @@ int main(int argc, char* argv[])
 	if (option == "-V") {
 		auto chk = Lint::Validate(schema);
 		if (chk) {
-			std::cout << ENTER <<  "success" << ENTER;
+			std::cout << ENTER << "success" << ENTER;
 		}
 		else {
 			std::cout << ENTER << "fail" << ENTER;
