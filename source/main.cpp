@@ -2,6 +2,8 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 
+#include <vld.h>
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -489,20 +491,20 @@ namespace Lint {
 					continue;
 				}
 				else if (schemaUT->GetItemList(itCount).ToString() == "%multiple_on") {
-					if (order == Option::Order_::OFF) {
-						std::cout << "to do %multple_on, need to %order_on!" << ENTER;
-						throw "ERROR1";
-					}
+				//	if (order == Option::Order_::OFF) {
+				//		std::cout << "to do %multple_on, need to %order_on!" << ENTER;
+				//		throw "ERROR1";
+				//	}
 					multiple_flag = 1;
 					validVisit[i] = true;
 					itCount++;
 					continue;
 				}
 				else if (schemaUT->GetItemList(itCount).ToString() == "%multiple_off") {
-					if (order == Option::Order_::OFF) {
-						std::cout << "to do %multple_off, need to %order_on!" << ENTER;
-						throw "ERROR2";
-					}
+					//if (order == Option::Order_::OFF) {
+					//	std::cout << "to do %multple_off, need to %order_on!" << ENTER;
+					//	throw "ERROR2";
+					//}
 					multiple_flag = 0;
 					multiple_run = 0;
 					validVisit[i] = true;
@@ -541,11 +543,21 @@ namespace Lint {
 
 					int check_justone = 0;
 
+					int count_iter = 0;
+
 					// schemaUT?
 					for (long long j = 0; j < clautextUT->GetItemListSize(); ++j) {
+						if (count_iter > 0 && 0 == multiple_flag) {
+							break;
+						}
+
 						if (log_on) {
 							std::cout << ENTER << "\t" << "[clau ~th] : " << j << " "
 								<< "[clautext] : " << clautextUT->GetItemList(j).ToString() << ENTER;
+						}
+
+						if (mark[j] == true) {
+							continue;
 						}
 
 						temp = _Check(schema_eventUT, schemaUT->GetItemList(itCount), clautextUT->GetItemList(j), wiz::load_data::LoadData::GetRealDir(clautextUT->GetItemList(j).GetName().ToString(), clautextUT, &builder));
@@ -554,6 +566,8 @@ namespace Lint {
 						if (mark[j] == false &&
 							std::get<0>(temp)
 							) {
+							count_iter++;
+
 							// visit vector? chk?
 							validVisit[i] = true;
 							varOptionVisit[i] = std::get<1>(temp);
@@ -774,6 +788,10 @@ namespace Lint {
 						}
 					}
 					else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
+						if (i == schemaUT->GetIListSize() - 1) {
+							throw "clauText is not valid - error1 ";
+						}
+
 						check_pass = false;
 						validVisit[i] = true;
 
@@ -819,17 +837,28 @@ namespace Lint {
 					bool pass = false;
 					bool use_onemore = false;
 					std::tuple<bool, Option> temp3;
-
+					int count_iter = 0;
 					int check_justone = 0;
 
 					for (long long j = 0; j < clautextUT->GetUserTypeListSize(); ++j) {
+						if (count_iter > 0 && 0 == multiple_flag) {
+							break;
+						}
+						
+						if (mark2[j]) {
+							continue;
+						}
+
 						if (log_on) {
 							std::cout << ENTER << "\t" << "[clau ~th] : " << j << " "
 								<< "[clautext] : " << clautextUT->GetUserTypeList(j)->GetName().ToString() << ENTER;
 						}
+
 						temp3 = _Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(j), wiz::load_data::LoadData::GetRealDir(clautextUT->GetUserTypeList(j)->GetName().ToString(), clautextUT->GetUserTypeList(j), &builder));
 
 						if (mark2[j] == false && (std::get<0>(temp3) || std::get<1>(temp3).required == Option::Required_::OPTIONAL_)) {
+							count_iter++;
+
 							if (log_on) {
 								std::cout << " { " << ENTER;
 							}
@@ -943,7 +972,7 @@ namespace Lint {
 							continue;
 						}
 						else {
-							return is_optional; //... optional.....
+							return is_optional; //... optional..... - ToDo : removal??
 						}
 					}
 
@@ -975,11 +1004,6 @@ namespace Lint {
 							check_pass = true;
 							validVisit[i] = true;
 						}
-						// ??
-						//else if (clautextUT->GetUserTypeList(ct_utCount)->empty() && std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
-						//	check_pass = true; 
-						//	validVisit[i] = true; //
-						//}
 						else if (Check(schema_eventUT, schemaUT->GetUserTypeList(utCount), clautextUT->GetUserTypeList(ct_utCount), depth + 1, log_on, is_optional || std::get<1>(temp).required == Option::Required_::OPTIONAL_)) {
 							validVisit[i] = true;
 
@@ -1031,6 +1055,9 @@ namespace Lint {
 							}
 						}
 						else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
+							if (i == schemaUT->GetIListSize() - 1) {
+								throw "clauText is not valid - error3 ";
+							}
 							check_pass = false;
 							validVisit[i] = true;
 						}
@@ -1043,6 +1070,10 @@ namespace Lint {
 						}
 					}
 					else if (std::get<1>(temp).required == Option::Required_::OPTIONAL_) {
+						if (i == schemaUT->GetIListSize() - 1) {
+							throw "clauText is not valid - error4 ";
+						}
+
 						check_pass = false;
 						validVisit[i] = true;
 
@@ -1214,7 +1245,7 @@ namespace Lint {
 
 		bool valid = wiz::load_data::LoadData::LoadDataFromFile5_2(fileName, ut, 0, 0);
 
-		return { valid, std::move(ut) };
+		return { valid, (ut) };
 	}
 	inline std::pair<bool, wiz::load_data::UserType> LoadJsonFile(const std::string & fileName)
 	{
@@ -1222,7 +1253,7 @@ namespace Lint {
 
 		bool valid = wiz::load_data::LoadData::LoadDataFromFileFastJson(fileName, ut, 0, 0);
 
-		return { valid, std::move(ut) };
+		return { valid, (ut) };
 	}
 
 	// todo SaveJsonFile? for Make Schema?
@@ -1232,86 +1263,111 @@ namespace Lint {
 		return true;
 	}
 
+
 }
 
 int main(int argc, char* argv[])
 {
+	//auto chk_schema = Lint::LoadFile(
+	//	"C:\\Users\\vztpv\\Desktop\\Clau\\ClauText\\json_test.txt"); //
+		//argv[2]); // 3 -> 2
+//	return 0;
+	
+	//char buffer[] = "wow = zzz";
+	//wiz::load_data::UserType* x;
+	//wiz::load_data::UserType ut;
+	//ut.AddItem(std::string(buffer, 3), std::string(buffer+6, 3));
+//	ut.AddUserTypeItem(wiz::load_data::UserType(""));
+	//ut.AddUserTypeItem(wiz::load_data::UserType(""));
+//	ut.GetUserTypeList(0)->Remove();
+
+//	return 0;
+	
 	std::string option;
 	wiz::load_data::UserType schema; // argv[3]?
 	wiz::load_data::UserType clautext; // argv[2]
 	std::string fileName; // to save
 
-	// -v : version? - to do
-	// -V : Validate.
-	// -M : Make schema. // removal?
-	if (argc == 3 && 0 == strcmp("-V", argv[1])) {
-		option = "-V";
+	try {
+		// -v : version? - to do
+		// -V : Validate.
+		// -M : Make schema. // removal?
+		if (argc == 3 && 0 == strcmp("-V", argv[1])) {
+			option = "-V";
 
-		//auto chk_clautext = Lint::LoadFile(argv[2]);
-		auto chk_schema = Lint::LoadFile(argv[2]); // 3 -> 2
+			//auto chk_clautext = Lint::LoadFile(argv[2]);
+			auto chk_schema = Lint::LoadFile(
+				//"C:\\Users\\vztpv\\Desktop\\Clau\\ClauText\\c.txt"); //
+				argv[2]); // 3 -> 2
 
-		if (chk_schema.first) {
-			schema = std::move(chk_schema.second);
+			if (chk_schema.first) {
+				schema = std::move(chk_schema.second);
+			}
+			else {
+				std::cout << "schema load fail" << ENTER;
+				return 1;
+			}
+			//if (chk_clautext.first) {
+			//	clautext = std::move(chk_clautext.second);
+			//}
+			//else {
+			//	std::cout << "clautext load fail" << ENTER;
+			//	return 2;
+			//}
+		}
+		else if (argc == 4 && 0 == strcmp("-M", argv[1])) {
+			option = "-M";
+
+			auto chk_clautext = Lint::LoadFile(argv[2]);
+
+			if (chk_clautext.first) {
+				clautext = std::move(chk_clautext.second);
+			}
+			else {
+				std::cout << "clautext load fail" << ENTER;
+				return 3;
+			}
+			fileName = argv[3];
+		}
+
+		if (option == "-V") {
+			auto chk = Lint::Validate(schema);
+			if (chk) {
+				std::cout << ENTER << "success" << ENTER;
+			}
+			else {
+				std::cout << ENTER << "fail" << ENTER;
+			}
+		}
+		else if (option == "-M") {
+			//	auto chk = MakeSchema(clautext);
+			//	if (chk.first) {
+			//		schema = chk.second;
+
+			//		if (SaveFile(fileName, schema)) {
+
+			//		}
+			//		else {
+			//			std::cout << "save fail" << ENTER;
+			//			return 4;
+			//		}
+
+			//		std::cout << "success" << ENTER;
+			//	}
+			//	else {
+			//		std::cout << "fail" << ENTER;
+			//	}
 		}
 		else {
-			std::cout << "schema load fail" << ENTER;
-			return 1;
-		}
-		//if (chk_clautext.first) {
-		//	clautext = std::move(chk_clautext.second);
-		//}
-		//else {
-		//	std::cout << "clautext load fail" << ENTER;
-		//	return 2;
-		//}
-	}
-	else if (argc == 4 && 0 == strcmp("-M", argv[1])) {
-		option = "-M";
-
-		auto chk_clautext = Lint::LoadJsonFile(argv[2]);
-
-		if (chk_clautext.first) {
-			clautext = std::move(chk_clautext.second);
-		}
-		else {
-			std::cout << "clautext load fail" << ENTER;
-			return 3;
-		}
-		fileName = argv[3];
-	}
-
-	if (option == "-V") {
-		auto chk = Lint::Validate(schema);
-		if (chk) {
-			std::cout << ENTER << "success" << ENTER;
-		}
-		else {
-			std::cout << ENTER << "fail" << ENTER;
+			std::cout << "it is not valid option" << ENTER;
 		}
 	}
-	else if (option == "-M") {
-		//	auto chk = MakeSchema(clautext);
-		//	if (chk.first) {
-		//		schema = chk.second;
-
-		//		if (SaveFile(fileName, schema)) {
-
-		//		}
-		//		else {
-		//			std::cout << "save fail" << ENTER;
-		//			return 4;
-		//		}
-
-		//		std::cout << "success" << ENTER;
-		//	}
-		//	else {
-		//		std::cout << "fail" << ENTER;
-		//	}
+	catch (const char* str) {
+		std::cout << str << "\n";
 	}
-	else {
-		std::cout << "it is not valid option" << ENTER;
+	catch (...) {
+		std::cout << "unknown error\n";
 	}
-
 	return 0;
 }
 
